@@ -130,7 +130,7 @@ const Dashboard = (() => {
         await renderDashboard(container);
         break;
       case 'peta':
-        title.textContent = 'Peta Usaha';
+        title.textContent = 'Peta Data';
         await renderMapPage(container);
         break;
       case 'data':

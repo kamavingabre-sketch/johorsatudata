@@ -1,33 +1,10 @@
 /* ========================================
-   Map Module — Global Map with Filters
-   Kecamatan Medan Johor Boundary
+   Map Module — Global Data Map with Filters
    ======================================== */
 
 const MapModule = (() => {
   let map = null;
-  let allMarkers = { business: [], disaster: [], worship: [] };
   let layerGroups = { business: null, disaster: null, worship: null };
-  let boundaryLayer = null;
-
-  /* ---- Medan Johor Boundary ---- */
-  // Approximate polygon for Kecamatan Medan Johor
-  const JOHOR_BOUNDS = [
-    [3.5965, 98.6130],  // NW
-    [3.5980, 98.6350],
-    [3.5970, 98.6570],
-    [3.5940, 98.6720],  // NE
-    [3.5800, 98.6780],
-    [3.5650, 98.6750],
-    [3.5530, 98.6650],  // SE
-    [3.5480, 98.6450],
-    [3.5500, 98.6250],
-    [3.5570, 98.6130],  // SW
-    [3.5750, 98.6090],
-    [3.5965, 98.6130],  // close polygon
-  ];
-
-  const JOHOR_CENTER = [3.5750, 98.6400];
-  const JOHOR_MAX_BOUNDS = L.latLngBounds([3.5350, 98.5950], [3.6100, 98.6950]);
 
   const CATEGORY_COLORS = {
     'PERDAGANGAN': '#1a73e8', 'KULINER': '#ea4335',
@@ -36,12 +13,14 @@ const MapModule = (() => {
     'PERTANIAN': '#4caf50', 'PERIKANAN': '#00bcd4', 'PETERNAKAN': '#795548',
   };
 
+  const JOHOR_CENTER = [3.5750, 98.6400];
+
   /* ---- Init ---- */
   async function initDashboardMap(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Replace container with layout: filter bar + map
+    // Build layout: filter bar + map
     container.parentElement.innerHTML = `
       <div style="position:relative;">
         <div id="mapFilterBar" style="
@@ -51,7 +30,7 @@ const MapModule = (() => {
           display:flex; gap:16px; flex-wrap:wrap; align-items:center;
           box-shadow:0 8px 32px rgba(0,0,0,0.4); max-width:calc(100% - 24px);
         ">
-          <span style="color:#a3a3a3;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Filter:</span>
+          <span style="color:#a3a3a3;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Tampilkan:</span>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#fafafa;user-select:none;">
             <input type="checkbox" id="filterBusiness" checked style="accent-color:#1a73e8;width:16px;height:16px;">
             <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1a73e8;"></span>
@@ -70,81 +49,33 @@ const MapModule = (() => {
             Rumah Ibadah
             <span id="countWorship" style="color:#737373;font-size:11px;"></span>
           </label>
-          <span style="width:1px;height:20px;background:rgba(255,255,255,0.1);"></span>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#fafafa;user-select:none;">
-            <input type="checkbox" id="filterBoundary" checked style="accent-color:#f59e0b;width:16px;height:16px;">
-            <span style="color:#f59e0b;">⬡</span>
-            Batas Kecamatan
-          </label>
-          <span style="width:1px;height:20px;background:rgba(255,255,255,0.1);"></span>
-          <button id="btnFitBounds" style="
-            background:rgba(102,126,234,0.2); border:1px solid rgba(102,126,234,0.3);
-            color:#93c5fd; padding:4px 12px; border-radius:6px; font-size:12px;
-            font-weight:600; cursor:pointer; transition:all 0.2s;
-          " onmouseover="this.style.background='rgba(102,126,234,0.3)'" onmouseout="this.style.background='rgba(102,126,234,0.2)'">
-            📍 Fokus Medan Johor
-          </button>
         </div>
         <div id="mapContainer" class="map-full"></div>
       </div>
     `;
 
-    // Init Leaflet map
+    // Init Leaflet map — no bounds restriction
     map = L.map('mapContainer', {
       center: JOHOR_CENTER,
       zoom: 14,
-      maxBounds: JOHOR_MAX_BOUNDS,
-      maxBoundsViscosity: 0.8,
-      minZoom: 12,
+      minZoom: 3,
       maxZoom: 19,
     });
 
-    // Street view tiles (OpenStreetMap)
+    // Street view (OpenStreetMap)
     const streetLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap', maxZoom: 19
     }).addTo(map);
 
-    // Satellite view tiles (Esri World Imagery - free, no API key)
+    // Satellite view (Esri World Imagery — free, no API key)
     const satelliteLayer = L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       { attribution: '&copy; Esri', maxZoom: 19 }
     );
 
-    // Labels overlay for satellite
-    const labelsLayer = L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-      { attribution: '', maxZoom: 19, opacity: 0.8 }
-    );
-
     // Layer control (top right)
     const baseMaps = { '🗺️ Peta': streetLayer, '🛰️ Satelit': satelliteLayer };
     L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
-
-    // Draw boundary polygon
-    boundaryLayer = L.polygon(JOHOR_BOUNDS, {
-      color: '#f59e0b',
-      weight: 2.5,
-      opacity: 0.8,
-      fillColor: '#f59e0b',
-      fillOpacity: 0.04,
-      dashArray: '8, 6',
-    }).addTo(map);
-
-    // Boundary label
-    const boundsCenter = boundaryLayer.getBounds().getCenter();
-    L.marker(boundsCenter, {
-      icon: L.divIcon({
-        className: '',
-        html: `<div style="
-          background:rgba(245,158,11,0.9); color:white; padding:4px 12px;
-          border-radius:6px; font-size:11px; font-weight:700; white-space:nowrap;
-          box-shadow:0 2px 8px rgba(0,0,0,0.3); text-transform:uppercase;
-          letter-spacing:0.05em; transform:translateX(-50%);
-        ">Kecamatan Medan Johor</div>`,
-        iconSize: [0, 0], iconAnchor: [0, 0],
-      }),
-      interactive: false,
-    }).addTo(map);
 
     // Init layer groups
     layerGroups.business = L.layerGroup().addTo(map);
@@ -158,21 +89,6 @@ const MapModule = (() => {
     document.getElementById('filterBusiness').addEventListener('change', (e) => toggleLayer('business', e.target.checked));
     document.getElementById('filterDisaster').addEventListener('change', (e) => toggleLayer('disaster', e.target.checked));
     document.getElementById('filterWorship').addEventListener('change', (e) => toggleLayer('worship', e.target.checked));
-    document.getElementById('filterBoundary').addEventListener('change', (e) => {
-      if (e.target.checked) boundaryLayer.addTo(map); else map.removeLayer(boundaryLayer);
-    });
-    document.getElementById('btnFitBounds').addEventListener('click', () => {
-      map.fitBounds(boundaryLayer.getBounds(), { padding: [60, 60] });
-    });
-
-    // Satellite toggle: also add/remove labels
-    map.on('baselayerchange', (e) => {
-      if (e.layer === satelliteLayer) labelsLayer.addTo(map);
-      else map.removeLayer(labelsLayer);
-    });
-
-    // Fit to boundary on first load
-    map.fitBounds(boundaryLayer.getBounds(), { padding: [60, 60] });
   }
 
   function toggleLayer(type, visible) {
@@ -189,7 +105,7 @@ const MapModule = (() => {
     // Businesses
     try {
       const biz = await App.api('/api/businesses/map/all');
-      document.getElementById('countBusiness').textContent = `(${biz.places.length})`;
+      document.getElementById('countBusiness').textContent = `(${biz.count})`;
       biz.places.forEach(p => {
         if (!p.lat || !p.lng) return;
         const color = CATEGORY_COLORS[p.kategori_usaha] || '#1a73e8';
@@ -201,7 +117,7 @@ const MapModule = (() => {
     // Disasters
     try {
       const dis = await App.api('/api/disasters/map/all');
-      document.getElementById('countDisaster').textContent = `(${dis.places.length})`;
+      document.getElementById('countDisaster').textContent = `(${dis.count})`;
       dis.places.forEach(p => {
         if (!p.lat || !p.lng) return;
         const m = addDisasterMarker(p);
@@ -212,13 +128,18 @@ const MapModule = (() => {
     // Worship places
     try {
       const wor = await App.api('/api/worship/map/all');
-      document.getElementById('countWorship').textContent = `(${wor.places.length})`;
+      document.getElementById('countWorship').textContent = `(${wor.count})`;
       wor.places.forEach(p => {
         if (!p.lat || !p.lng) return;
         const m = addWorshipMarker(p);
         if (m) { layerGroups.worship.addLayer(m); allBounds.push([p.lat, p.lng]); }
       });
     } catch (e) { console.error('Error loading worship places:', e); }
+
+    // Fit bounds if there are markers
+    if (allBounds.length > 0) {
+      map.fitBounds(L.latLngBounds(allBounds), { padding: [50, 50] });
+    }
   }
 
   /* ---- Marker Builders ---- */
