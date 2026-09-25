@@ -149,8 +149,8 @@ router.post('/', requireAuth, uploadPhotos, (req, res) => {
   const alamat = String(body.alamat || '').trim();
   if (alamat.length < 5) errors.push('Alamat lengkap minimal 5 karakter.');
   
-  const jenis_bencana = String(body.jenis_bencana || '').toUpperCase().trim();
-  if (!ENUMS.JENIS_BENCANA.includes(jenis_bencana)) errors.push('Jenis bencana tidak valid.');
+  const jenis_bencana = String(body.jenis_bencana || '').trim();
+  if (jenis_bencana.length < 3) errors.push('Jenis bencana wajib diisi (isi singkat).');
   
   const penyebab = String(body.penyebab || '').trim();
   if (penyebab.length < 3) errors.push('Penyebab bencana wajib diisi.');
@@ -212,8 +212,8 @@ router.put('/:id', requireAuth, uploadPhotos, (req, res) => {
   const alamat = String(body.alamat || '').trim();
   if (alamat.length < 5) errors.push('Alamat lengkap minimal 5 karakter.');
   
-  const jenis_bencana = String(body.jenis_bencana || '').toUpperCase().trim();
-  if (!ENUMS.JENIS_BENCANA.includes(jenis_bencana)) errors.push('Jenis bencana tidak valid.');
+  const jenis_bencana = String(body.jenis_bencana || '').trim();
+  if (jenis_bencana.length < 3) errors.push('Jenis bencana wajib diisi (isi singkat).');
   
   const penyebab = String(body.penyebab || '').trim();
   if (penyebab.length < 3) errors.push('Penyebab bencana wajib diisi.');

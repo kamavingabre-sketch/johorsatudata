@@ -10,11 +10,7 @@ const Disaster = (() => {
     const meta = await App.fetchMeta();
     container.innerHTML = `
       <div class="data-toolbar">
-        <input type="text" class="search-input" id="disasterSearch" placeholder="Cari lokasi, alamat, penyebab...">
-        <select class="filter-select" id="disasterFilterJenis">
-          <option value="">Semua Jenis</option>
-          ${meta.enums.jenis_bencana.map(k => `<option value="${k}">${k}</option>`).join('')}
-        </select>
+        <input type="text" class="search-input" id="disasterSearch" placeholder="Cari lokasi, alamat, jenis bencana, penyebab...">
         <a href="#tambah-bencana" class="btn btn-primary btn-sm">+ Tambah Bencana</a>
       </div>
       <div id="disasterTableContainer"><div class="loading">Memuat...</div></div>
@@ -23,10 +19,8 @@ const Disaster = (() => {
     let page = 1;
     async function loadData() {
       const search = document.getElementById('disasterSearch').value;
-      const jenis = document.getElementById('disasterFilterJenis').value;
       const params = new URLSearchParams({ page, per: 15 });
       if (search) params.set('search', search);
-      if (jenis) params.set('jenis', jenis);
       try {
         const data = await App.api(`/api/disasters?${params}`);
         document.getElementById('disasterTableContainer').innerHTML = renderTable(data);
@@ -36,7 +30,6 @@ const Disaster = (() => {
     }
 
     document.getElementById('disasterSearch').addEventListener('input', App.debounce(() => { page = 1; loadData(); }));
-    document.getElementById('disasterFilterJenis').addEventListener('change', () => { page = 1; loadData(); });
     window._loadDisasters = loadData;
     window._setDisasterPage = (p) => { page = p; loadData(); };
     await loadData();
@@ -120,10 +113,8 @@ const Disaster = (() => {
             <div class="form-row">
               <div class="form-group">
                 <label>Jenis Bencana <span class="required">*</span></label>
-                <select name="jenis_bencana" required>
-                  <option value="">-- Pilih --</option>
-                  ${meta.enums.jenis_bencana.map(k => `<option value="${k}" ${isEdit && disaster.jenis_bencana === k ? 'selected' : ''}>${k}</option>`).join('')}
-                </select>
+                <input type="text" name="jenis_bencana" required value="${isEdit ? App.escapeHtml(disaster.jenis_bencana) : ''}" placeholder="Contoh: Banjir, Angin Puting Beliung, Tanah Longsor">
+                <div class="hint">Isi singkat: Banjir, Angin Puting Beliung, Tanah Longsor, dll.</div>
               </div>
               <div class="form-group">
                 <label>Penyebab Bencana <span class="required">*</span></label>
