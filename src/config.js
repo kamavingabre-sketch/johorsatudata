@@ -21,7 +21,7 @@ module.exports = {
   UPLOADS_DIR,
   PUBLIC_DIR,
   SECRET,
-  PORT: parseInt(process.env.PORT || '3000', 10),
+  PORT: parseInt(process.env.PORT || '4000', 10),
   HOST: process.env.HOST || '0.0.0.0',
   APP_NAME: 'JohorSatuData',
   APP_TAGLINE: 'Pendataan Usaha Kecamatan Medan Johor',
