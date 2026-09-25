@@ -22,7 +22,7 @@ const ENUMS = {
   KEAMANAN: ['LENGKAP', 'KURANG LENGKAP', 'TIDAK LENGKAP'],
   FIELD_TYPES: ['text', 'number', 'date', 'select', 'yesno', 'phone', 'photo'],
   JENIS_BENCANA: ['BANJIR', 'ANGIN PUTING BELIUNG'],
-  JENIS_IBADAH: ['MASJID', 'MUSHOLLA', 'GEREJA', 'PURA', 'VIHARA', 'KLENTENG'],
+  AGAMA: ['ISLAM', 'KRISTEN PROTESTAN', 'KATOLIK', 'HINDU', 'BUDDHA', 'KONGHUCU'],
 };
 
 // Wrapper untuk sql.js yang kompatibel dengan API better-sqlite3
@@ -226,11 +226,10 @@ async function init() {
     owner_id INTEGER NOT NULL REFERENCES users(id),
     nama TEXT NOT NULL,
     jenis TEXT NOT NULL,
+    agama TEXT NOT NULL DEFAULT '',
     alamat TEXT NOT NULL,
     nama_pengelola TEXT,
     hp_pengelola TEXT,
-    kapasitas INTEGER,
-    tahun_berdiri INTEGER,
     foto TEXT,
     lat REAL,
     lng REAL,
@@ -238,6 +237,9 @@ async function init() {
     updated_at TEXT
   );
   `);
+
+  // Migrations for existing databases
+  try { db.exec("ALTER TABLE worship_places ADD COLUMN agama TEXT NOT NULL DEFAULT ''"); } catch {}
 
   // Indexes
   db.exec(`CREATE INDEX IF NOT EXISTS idx_biz_owner ON businesses(owner_id)`);

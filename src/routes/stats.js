@@ -35,7 +35,7 @@ router.get('/stats', requireAuth, (req, res) => {
     .prepare('SELECT jenis_bencana name, COUNT(*) count FROM disasters GROUP BY jenis_bencana ORDER BY count DESC')
     .all();
   const byIbadah = db
-    .prepare('SELECT jenis name, COUNT(*) count FROM worship_places GROUP BY jenis ORDER BY count DESC')
+    .prepare('SELECT agama name, COUNT(*) count FROM worship_places GROUP BY agama ORDER BY count DESC')
     .all();
   const pendata = db
     .prepare(`SELECT u.nama, u.username, COUNT(b.id) c FROM users u LEFT JOIN businesses b ON b.owner_id=u.id

@@ -277,9 +277,9 @@ const Dashboard = (() => {
             </div>
           </div>
           <div class="dashboard-card">
-            <div class="card-header"><h3>Jenis Rumah Ibadah</h3></div>
+            <div class="card-header"><h3>Rumah Ibadah per Agama</h3></div>
             <div class="card-body">
-              ${renderChart(data.byIbadah, 'jenis')}
+              ${renderChart(data.byIbadah, 'agama')}
             </div>
           </div>
           <div class="dashboard-card">

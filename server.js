@@ -28,7 +28,7 @@ app.get('/api/meta', (req, res) => {
       kategori: ENUMS.KATEGORI,
       keamanan: ENUMS.KEAMANAN,
       jenis_bencana: ENUMS.JENIS_BENCANA,
-      jenis_ibadah: ENUMS.JENIS_IBADAH,
+      agama: ENUMS.AGAMA,
     },
     center: [3.5786, 98.6373],
     zoom: 14,

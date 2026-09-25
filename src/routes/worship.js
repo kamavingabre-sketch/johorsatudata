@@ -5,7 +5,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { db, ENUMS, logAction } = require('../db');
 const { UPLOADS_DIR } = require('../config');
-const { requireAuth, requireSuper, clientIp } = require('../util');
+const { requireAuth, clientIp } = require('../util');
 
 const router = express.Router();
 
@@ -40,10 +40,7 @@ function uploadPhotos(req, res, next) {
     },
   }).fields([{ name: 'foto', maxCount: 1 }]);
   mw(req, res, (err) => {
-    if (err) {
-      cleanupFiles(req);
-      return res.status(400).json({ error: err.message || 'Gagal mengunggah file.' });
-    }
+    if (err) { cleanupFiles(req); return res.status(400).json({ error: err.message || 'Gagal mengunggah file.' }); }
     next();
   });
 }
@@ -56,9 +53,7 @@ function uploadedPath(req, fieldname) {
 
 function cleanupFiles(req) {
   if (!req.files) return;
-  for (const arr of Object.values(req.files)) {
-    for (const f of arr) fs.promises.unlink(f.path).catch(() => {});
-  }
+  for (const arr of Object.values(req.files)) for (const f of arr) fs.promises.unlink(f.path).catch(() => {});
 }
 
 function removeStoredPhoto(url) {
@@ -75,23 +70,14 @@ function genRefCode(seq) {
 
 function shapeRow(row) {
   return {
-    id: row.id,
-    ref: row.ref_code,
-    nama: row.nama,
-    jenis: row.jenis,
+    id: row.id, ref: row.ref_code,
+    nama: row.nama, jenis: row.jenis, agama: row.agama || '',
     alamat: row.alamat,
-    nama_pengelola: row.nama_pengelola,
-    hp_pengelola: row.hp_pengelola,
-    kapasitas: row.kapasitas,
-    tahun_berdiri: row.tahun_berdiri,
-    foto: row.foto || null,
-    lat: row.lat,
-    lng: row.lng,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
+    nama_pengelola: row.nama_pengelola, hp_pengelola: row.hp_pengelola,
+    foto: row.foto || null, lat: row.lat, lng: row.lng,
+    created_at: row.created_at, updated_at: row.updated_at,
     owner_id: row.owner_id,
-    owner_nama: row.owner_nama || null,
-    owner_username: row.owner_username || null,
+    owner_nama: row.owner_nama || null, owner_username: row.owner_username || null,
   };
 }
 
@@ -105,13 +91,10 @@ router.get('/', requireAuth, (req, res) => {
   const where = [];
   const params = {};
   if (req.query.search) {
-    where.push('(w.nama LIKE @q OR w.alamat LIKE @q OR w.nama_pengelola LIKE @q OR w.ref_code LIKE @q)');
+    where.push('(w.nama LIKE @q OR w.alamat LIKE @q OR w.nama_pengelola LIKE @q OR w.ref_code LIKE @q OR w.jenis LIKE @q)');
     params.q = `%${String(req.query.search).trim()}%`;
   }
-  if (req.query.jenis) {
-    where.push('w.jenis = @jenis');
-    params.jenis = req.query.jenis;
-  }
+  if (req.query.agama) { where.push('w.agama = @agama'); params.agama = req.query.agama; }
   const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
   const total = db.prepare(`SELECT COUNT(*) c FROM worship_places w ${whereSql}`).get(params).c;
   const rows = db
@@ -138,51 +121,52 @@ router.get('/:id', requireAuth, (req, res) => {
 
 /* ---------------- create / update / delete ---------------- */
 
-router.post('/', requireAuth, uploadPhotos, (req, res) => {
+function validate(body) {
   const errors = [];
-  const body = req.body || {};
-  
   const nama = String(body.nama || '').trim();
   if (nama.length < 2) errors.push('Nama rumah ibadah wajib diisi.');
-  
+
+  const jenis = String(body.jenis || '').trim();
+  if (jenis.length < 2) errors.push('Jenis rumah ibadah wajib diisi (isi singkat).');
+
+  const agama = String(body.agama || '').toUpperCase().trim();
+  if (!ENUMS.AGAMA.includes(agama)) errors.push('Agama tidak valid.');
+
   const alamat = String(body.alamat || '').trim();
   if (alamat.length < 5) errors.push('Alamat lengkap minimal 5 karakter.');
-  
-  const jenis = String(body.jenis || '').toUpperCase().trim();
-  if (!ENUMS.JENIS_IBADAH.includes(jenis)) errors.push('Jenis rumah ibadah tidak valid.');
+
+  return { nama, jenis, agama, alamat, errors };
+}
+
+router.post('/', requireAuth, uploadPhotos, (req, res) => {
+  const body = req.body || {};
+  const { nama, jenis, agama, alamat, errors } = validate(body);
 
   const lat = parseFloat(body.lat);
   const lng = parseFloat(body.lng);
   const finalLat = Number.isFinite(lat) && lat >= -90 && lat <= 90 ? lat : null;
   const finalLng = Number.isFinite(lng) && lng >= -180 && lng <= 180 ? lng : null;
-
   const foto = uploadedPath(req, 'foto');
 
-  if (errors.length) {
-    cleanupFiles(req);
-    return res.status(400).json({ error: errors.join(' ') });
-  }
+  if (errors.length) { cleanupFiles(req); return res.status(400).json({ error: errors.join(' ') }); }
 
   const seq = db.prepare('SELECT COALESCE(MAX(id),0)+1 n FROM worship_places').get().n;
   const ref = genRefCode(seq);
-  const kapasitas = parseInt(body.kapasitas) || null;
-  const tahun_berdiri = parseInt(body.tahun_berdiri) || null;
-
   const info = db.prepare(
-    `INSERT INTO worship_places (ref_code, owner_id, nama, jenis, alamat, nama_pengelola, hp_pengelola, kapasitas, tahun_berdiri, foto, lat, lng)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO worship_places (ref_code, owner_id, nama, jenis, agama, alamat, nama_pengelola, hp_pengelola, foto, lat, lng)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`
   ).run(
-    ref, req.user.sub, nama, jenis, alamat,
+    ref, req.user.sub, nama, jenis, agama, alamat,
     String(body.nama_pengelola || '').trim() || null,
     String(body.hp_pengelola || '').trim() || null,
-    kapasitas, tahun_berdiri, foto, finalLat, finalLng
+    foto, finalLat, finalLng
   );
 
   logAction({
     userId: req.user.sub, username: req.user.username, nama: req.user.nama,
     action: 'ibadah.baru', targetType: 'worship', targetId: info.lastInsertRowid,
     targetName: `${ref} — ${nama}`,
-    detail: `Data rumah ibadah baru [${jenis}]`,
+    detail: `Data rumah ibadah baru: ${jenis} (${agama})`,
     ip: clientIp(req),
   });
 
@@ -194,21 +178,11 @@ router.put('/:id', requireAuth, uploadPhotos, (req, res) => {
   const row = db.prepare('SELECT * FROM worship_places WHERE id = ?').get(req.params.id);
   if (!row) { cleanupFiles(req); return res.status(404).json({ error: 'Data tidak ditemukan.' }); }
   if (req.user.role !== 'superadmin' && row.owner_id !== req.user.sub) {
-    cleanupFiles(req);
-    return res.status(403).json({ error: 'Anda hanya dapat menyunting data yang Anda buat sendiri.' });
+    cleanupFiles(req); return res.status(403).json({ error: 'Anda hanya dapat menyunting data yang Anda buat sendiri.' });
   }
 
-  const errors = [];
   const body = req.body || {};
-  
-  const nama = String(body.nama || '').trim();
-  if (nama.length < 2) errors.push('Nama rumah ibadah wajib diisi.');
-  
-  const alamat = String(body.alamat || '').trim();
-  if (alamat.length < 5) errors.push('Alamat lengkap minimal 5 karakter.');
-  
-  const jenis = String(body.jenis || '').toUpperCase().trim();
-  if (!ENUMS.JENIS_IBADAH.includes(jenis)) errors.push('Jenis rumah ibadah tidak valid.');
+  const { nama, jenis, agama, alamat, errors } = validate(body);
 
   const lat = parseFloat(body.lat);
   const lng = parseFloat(body.lng);
@@ -221,17 +195,14 @@ router.put('/:id', requireAuth, uploadPhotos, (req, res) => {
 
   if (errors.length) { cleanupFiles(req); return res.status(400).json({ error: errors.join(' ') }); }
 
-  const kapasitas = parseInt(body.kapasitas) || null;
-  const tahun_berdiri = parseInt(body.tahun_berdiri) || null;
-
   db.prepare(
-    `UPDATE worship_places SET nama=?, jenis=?, alamat=?, nama_pengelola=?, hp_pengelola=?,
-      kapasitas=?, tahun_berdiri=?, foto=?, lat=?, lng=?, updated_at=datetime('now') WHERE id=?`
+    `UPDATE worship_places SET nama=?, jenis=?, agama=?, alamat=?, nama_pengelola=?, hp_pengelola=?,
+      foto=?, lat=?, lng=?, updated_at=datetime('now') WHERE id=?`
   ).run(
-    nama, jenis, alamat,
+    nama, jenis, agama, alamat,
     String(body.nama_pengelola || '').trim() || null,
     String(body.hp_pengelola || '').trim() || null,
-    kapasitas, tahun_berdiri, foto, finalLat, finalLng, row.id
+    foto, finalLat, finalLng, row.id
   );
 
   logAction({

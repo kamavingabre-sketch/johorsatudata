@@ -6,16 +6,14 @@ const Worship = (() => {
   let map = null;
   let marker = null;
 
-  const JENIS_ICONS = { MASJID: '🕌', MUSHOLLA: '🕌', GEREJA: '⛪', PURA: '🛕', VIHARA: '☸️', KLENTENG: '🏯' };
-
   async function renderList(container) {
     const meta = await App.fetchMeta();
     container.innerHTML = `
       <div class="data-toolbar">
-        <input type="text" class="search-input" id="worshipSearch" placeholder="Cari nama, alamat, pengelola...">
-        <select class="filter-select" id="worshipFilterJenis">
-          <option value="">Semua Jenis</option>
-          ${meta.enums.jenis_ibadah.map(k => `<option value="${k}">${JENIS_ICONS[k] || ''} ${k}</option>`).join('')}
+        <input type="text" class="search-input" id="worshipSearch" placeholder="Cari nama, alamat, pengurus, jenis...">
+        <select class="filter-select" id="worshipFilterAgama">
+          <option value="">Semua Agama</option>
+          ${(meta.enums.agama || []).map(k => `<option value="${k}">${k}</option>`).join('')}
         </select>
         <a href="#tambah-ibadah" class="btn btn-primary btn-sm">+ Tambah Ibadah</a>
       </div>
@@ -25,10 +23,10 @@ const Worship = (() => {
     let page = 1;
     async function loadData() {
       const search = document.getElementById('worshipSearch').value;
-      const jenis = document.getElementById('worshipFilterJenis').value;
+      const agama = document.getElementById('worshipFilterAgama').value;
       const params = new URLSearchParams({ page, per: 15 });
       if (search) params.set('search', search);
-      if (jenis) params.set('jenis', jenis);
+      if (agama) params.set('agama', agama);
       try {
         const data = await App.api(`/api/worship?${params}`);
         document.getElementById('worshipTableContainer').innerHTML = renderTable(data);
@@ -38,7 +36,7 @@ const Worship = (() => {
     }
 
     document.getElementById('worshipSearch').addEventListener('input', App.debounce(() => { page = 1; loadData(); }));
-    document.getElementById('worshipFilterJenis').addEventListener('change', () => { page = 1; loadData(); });
+    document.getElementById('worshipFilterAgama').addEventListener('change', () => { page = 1; loadData(); });
     window._loadWorships = loadData;
     window._setWorshipPage = (p) => { page = p; loadData(); };
     await loadData();
@@ -48,8 +46,8 @@ const Worship = (() => {
     if (!data.rows.length) return `<div class="empty-state"><div class="empty-state-icon">🕌</div><h3>Belum ada data rumah ibadah</h3><p>Tambahkan data rumah ibadah baru.</p></div>`;
     let html = `<div class="data-table-wrap"><table class="data-table">
       <thead><tr>
-        <th>Kode</th><th>Nama</th><th>Jenis</th><th>Alamat</th>
-        <th>Pengelola</th><th>Kapasitas</th><th>Tahun</th><th>Pendata</th><th>Aksi</th>
+        <th>Kode</th><th>Nama</th><th>Jenis</th><th>Agama</th><th>Alamat</th>
+        <th>Pengurus</th><th>HP</th><th>Pendata</th><th>Aksi</th>
       </tr></thead><tbody>`;
     const user = Auth.getUser();
     for (const r of data.rows) {
@@ -57,11 +55,11 @@ const Worship = (() => {
       html += `<tr>
         <td><code>${App.escapeHtml(r.ref)}</code></td>
         <td><a href="#detail-ibadah/${r.id}"><strong>${App.escapeHtml(r.nama)}</strong></a></td>
-        <td><span class="tag">${JENIS_ICONS[r.jenis] || ''} ${App.escapeHtml(r.jenis)}</span></td>
+        <td><span class="tag">${App.escapeHtml(r.jenis)}</span></td>
+        <td>${App.escapeHtml(r.agama || '-')}</td>
         <td title="${App.escapeHtml(r.alamat)}">${App.escapeHtml(r.alamat.substring(0, 40))}${r.alamat.length > 40 ? '...' : ''}</td>
         <td>${App.escapeHtml(r.nama_pengelola || '-')}</td>
-        <td>${r.kapasitas ? r.kapasitas + ' orang' : '-'}</td>
-        <td>${r.tahun_berdiri || '-'}</td>
+        <td>${App.escapeHtml(r.hp_pengelola || '-')}</td>
         <td><small>${App.escapeHtml(r.owner_nama || '-')}</small></td>
         <td class="actions">
           <button class="btn btn-sm btn-ghost" onclick="window.location.hash='detail-ibadah/${r.id}'" title="Detail">👁️</button>
@@ -75,11 +73,9 @@ const Worship = (() => {
     if (totalPages > 1) {
       html += '<div class="pagination">';
       html += `<button ${data.page <= 1 ? 'disabled' : ''} onclick="window._setWorshipPage(${data.page - 1})">‹ Prev</button>`;
-      for (let i = 1; i <= Math.min(totalPages, 7); i++) {
+      for (let i = 1; i <= Math.min(totalPages, 7); i++)
         html += `<button class="${i === data.page ? 'active' : ''}" onclick="window._setWorshipPage(${i})">${i}</button>`;
-      }
-      html += `<button ${data.page >= totalPages ? 'disabled' : ''} onclick="window._setWorshipPage(${data.page + 1})">Next ›</button>`;
-      html += '</div>';
+      html += `<button ${data.page >= totalPages ? 'disabled' : ''} onclick="window._setWorshipPage(${data.page + 1})">Next ›</button></div>`;
     }
     return html;
   }
@@ -107,16 +103,21 @@ const Worship = (() => {
         <form id="worshipForm" class="form-card-body" enctype="multipart/form-data">
           <div class="form-section">
             <div class="form-section-title">Informasi Rumah Ibadah</div>
+            <div class="form-group">
+              <label>Nama Rumah Ibadah <span class="required">*</span></label>
+              <input type="text" name="nama" required value="${isEdit ? App.escapeHtml(worship.nama) : ''}" placeholder="Contoh: Masjid Al-Ikhlas, HKBP Johor">
+            </div>
             <div class="form-row">
               <div class="form-group">
-                <label>Nama Rumah Ibadah <span class="required">*</span></label>
-                <input type="text" name="nama" required value="${isEdit ? App.escapeHtml(worship.nama) : ''}" placeholder="Contoh: Masjid Al-Ikhlas">
+                <label>Jenis Rumah Ibadah <span class="required">*</span></label>
+                <input type="text" name="jenis" required value="${isEdit ? App.escapeHtml(worship.jenis) : ''}" placeholder="Contoh: Mesjid, Gereja, Kelenteng, Vihara">
+                <div class="hint">Isi singkat: Mesjid, Musholla, Gereja, Kelenteng, Vihara, Pura, dll.</div>
               </div>
               <div class="form-group">
-                <label>Jenis <span class="required">*</span></label>
-                <select name="jenis" required>
-                  <option value="">-- Pilih --</option>
-                  ${meta.enums.jenis_ibadah.map(k => `<option value="${k}" ${isEdit && worship.jenis === k ? 'selected' : ''}>${JENIS_ICONS[k] || ''} ${k}</option>`).join('')}
+                <label>Agama <span class="required">*</span></label>
+                <select name="agama" required>
+                  <option value="">-- Pilih Agama --</option>
+                  ${(meta.enums.agama || []).map(k => `<option value="${k}" ${isEdit && worship.agama === k ? 'selected' : ''}>${k}</option>`).join('')}
                 </select>
               </div>
             </div>
@@ -127,41 +128,23 @@ const Worship = (() => {
           </div>
 
           <div class="form-section">
-            <div class="form-section-title">Pengelola & Kapasitas</div>
+            <div class="form-section-title">Pengurus</div>
             <div class="form-row">
               <div class="form-group">
-                <label>Nama Pengelola / Penanggung Jawab</label>
-                <input type="text" name="nama_pengelola" value="${isEdit ? App.escapeHtml(worship.nama_pengelola || '') : ''}" placeholder="Nama lengkap">
+                <label>Nama Pengurus</label>
+                <input type="text" name="nama_pengelola" value="${isEdit ? App.escapeHtml(worship.nama_pengelola || '') : ''}" placeholder="Nama pengurus / penanggung jawab">
               </div>
               <div class="form-group">
-                <label>Nomor HP Pengelola</label>
+                <label>Nomor HP Pengurus</label>
                 <input type="tel" name="hp_pengelola" value="${isEdit ? App.escapeHtml(worship.hp_pengelola || '') : ''}" placeholder="08xxxxxxxxxx">
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>Kapasitas Jemaah (orang)</label>
-                <input type="number" name="kapasitas" value="${isEdit ? worship.kapasitas || '' : ''}" placeholder="Contoh: 500" min="0">
-              </div>
-              <div class="form-group">
-                <label>Tahun Berdiri</label>
-                <input type="number" name="tahun_berdiri" value="${isEdit ? worship.tahun_berdiri || '' : ''}" placeholder="Contoh: 1995" min="1800" max="2030">
               </div>
             </div>
           </div>
 
           <div class="form-section">
-            <div class="form-section-title">Foto & Lokasi</div>
+            <div class="form-section-title">Titik Lokasi Rumah Ibadah</div>
             <div class="form-group">
-              <label>Foto Rumah Ibadah</label>
-              ${isEdit && worship.foto ? `<div class="photo-preview"><img src="${worship.foto}"></div>` : ''}
-              <div class="file-upload">
-                <input type="file" name="foto" accept="image/jpeg,image/png,image/webp">
-                <div class="file-upload-text">Klik untuk unggah foto<br><small>JPG, PNG, WEBP (maks 8 MB)</small></div>
-              </div>
-            </div>
-            <div class="form-group">
-              <div class="hint mb-1">Pilih lokasi: (1) klik peta, (2) input koordinat manual, atau (3) gunakan GPS.</div>
+              <div class="hint mb-1">Pilih lokasi: (1) klik peta, (2) input koordinat manual, atau (3) gunakan GPS perangkat Anda.</div>
               <div class="location-picker">
                 <div class="location-picker-map" id="worshipMap"></div>
                 <div class="location-picker-info">
@@ -213,7 +196,8 @@ const Worship = (() => {
 
     function syncManual() {
       const lat = parseFloat(latInput.value), lng = parseFloat(lngInput.value);
-      if (Number.isFinite(lat) && Number.isFinite(lng)) document.getElementById('coordDisplay').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      if (Number.isFinite(lat) && Number.isFinite(lng))
+        document.getElementById('coordDisplay').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     }
     latInput.addEventListener('input', syncManual);
     lngInput.addEventListener('input', syncManual);
@@ -236,8 +220,8 @@ const Worship = (() => {
           gpsStatus.textContent = `✅ Lokasi GPS ditemukan (±${Math.round(pos.coords.accuracy)}m).`;
           document.getElementById('gpsBtn').disabled = false;
         },
-        (err) => {
-          gpsStatus.textContent = err.code === 1 ? '⚠️ Akses GPS ditolak.' : '⚠️ Gagal mengambil GPS.';
+        () => {
+          gpsStatus.textContent = '⚠️ Gagal mengambil GPS. Izinkan akses lokasi di browser.';
           document.getElementById('gpsBtn').disabled = false;
         },
         { enableHighAccuracy: true, timeout: 15000 }
@@ -280,11 +264,17 @@ const Worship = (() => {
 
     function setMarker(lat, lng, panTo = true) {
       const ll = L.latLng(lat, lng);
-      if (marker) { marker.setLatLng(ll); } else {
+      if (marker) { marker.setLatLng(ll); }
+      else {
         marker = L.marker(ll, { draggable: true }).addTo(map);
-        marker.on('dragend', () => { const p = marker.getLatLng(); latInput.value = p.lat; lngInput.value = p.lng; coordDisplay.textContent = `${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}`; });
+        marker.on('dragend', () => {
+          const p = marker.getLatLng();
+          latInput.value = p.lat; lngInput.value = p.lng;
+          coordDisplay.textContent = `${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}`;
+        });
       }
-      latInput.value = lat; lngInput.value = lng; coordDisplay.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      latInput.value = lat; lngInput.value = lng;
+      coordDisplay.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
       if (panTo) map.setView(ll, Math.max(map.getZoom(), 15));
     }
 
@@ -317,12 +307,11 @@ const Worship = (() => {
               </div>
               <div class="detail-info">
                 <dl>
-                  <dt>Jenis</dt><dd>${JENIS_ICONS[w.jenis] || ''} ${App.escapeHtml(w.jenis)}</dd>
+                  <dt>Jenis Rumah Ibadah</dt><dd>${App.escapeHtml(w.jenis)}</dd>
+                  <dt>Agama</dt><dd>${App.escapeHtml(w.agama || '-')}</dd>
                   <dt>Alamat</dt><dd>${App.escapeHtml(w.alamat)}</dd>
-                  <dt>Pengelola</dt><dd>${App.escapeHtml(w.nama_pengelola || '-')}</dd>
-                  <dt>HP Pengelola</dt><dd>${w.hp_pengelola ? `<a href="tel:${w.hp_pengelola}">${App.escapeHtml(w.hp_pengelola)}</a>` : '-'}</dd>
-                  <dt>Kapasitas</dt><dd>${w.kapasitas ? w.kapasitas + ' jemaah' : '-'}</dd>
-                  <dt>Tahun Berdiri</dt><dd>${w.tahun_berdiri || '-'}</dd>
+                  <dt>Nama Pengurus</dt><dd>${App.escapeHtml(w.nama_pengelola || '-')}</dd>
+                  <dt>HP Pengurus</dt><dd>${w.hp_pengelola ? `<a href="tel:${App.escapeHtml(w.hp_pengelola)}">${App.escapeHtml(w.hp_pengelola)}</a>` : '-'}</dd>
                   ${w.lat && w.lng ? `<dt>Koordinat</dt><dd>${w.lat.toFixed(6)}, ${w.lng.toFixed(6)}</dd>` : ''}
                   <dt>Pendata</dt><dd>${App.escapeHtml(w.owner_nama || '-')} (${App.escapeHtml(w.owner_username || '')})</dd>
                   <dt>Dibuat</dt><dd>${App.formatDateTime(w.created_at)}</dd>
@@ -343,7 +332,7 @@ const Worship = (() => {
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(m);
         const icon = L.divIcon({
           className: 'custom-marker-wrapper',
-          html: `<div class="custom-marker" style="background:#8b5cf6"><span>${JENIS_ICONS[w.jenis] || '🏛️'}</span></div>`,
+          html: `<div class="custom-marker" style="background:#8b5cf6"><span>🏛️</span></div>`,
           iconSize: [36, 36], iconAnchor: [18, 36]
         });
         L.marker([w.lat, w.lng], { icon }).addTo(m).bindPopup(`<strong>${App.escapeHtml(w.nama)}</strong>`).openPopup();
