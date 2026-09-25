@@ -1,0 +1,24 @@
+{
+  "name": "johorsatudata",
+  "version": "1.0.0",
+  "description": "Sistem Pendataan Usaha Kecamatan Medan Johor (JohorSatuData)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "reset-admin": "node scripts/reset-admin.js",
+    "seed-samples": "node scripts/seed-samples.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "leaflet": "^1.9.4",
+    "multer": "^2.0.1",
+    "sql.js": "^1.11.0"
+  }
+}

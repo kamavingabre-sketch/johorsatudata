@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - JohorSatuData</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+</head>
+<body class="dashboard-page">
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Memuat data...</p>
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <span class="logo-icon">📊</span>
+      <span class="logo-text">JohorSatuData</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#dashboard" class="nav-item active" data-page="dashboard">
+        <span class="nav-icon">🏠</span>
+        <span>Dashboard</span>
+      </a>
+      <a href="#peta" class="nav-item" data-page="peta">
+        <span class="nav-icon">🗺️</span>
+        <span>Peta Usaha</span>
+      </a>
+      <a href="#data" class="nav-item" data-page="data">
+        <span class="nav-icon">📋</span>
+        <span>Data Usaha</span>
+      </a>
+      <a href="#tambah" class="nav-item" data-page="tambah">
+        <span class="nav-icon">➕</span>
+        <span>Tambah Usaha</span>
+      </a>
+      <div class="nav-divider"><span>Bencana</span></div>
+      <a href="#bencana" class="nav-item" data-page="bencana">
+        <span class="nav-icon">🌊</span>
+        <span>Titik Rawan Bencana</span>
+      </a>
+      <a href="#tambah-bencana" class="nav-item" data-page="tambah-bencana">
+        <span class="nav-icon">⚠️</span>
+        <span>Tambah Bencana</span>
+      </a>
+      <div class="nav-divider"><span>Rumah Ibadah</span></div>
+      <a href="#ibadah" class="nav-item" data-page="ibadah">
+        <span class="nav-icon">🕌</span>
+        <span>Rumah Ibadah</span>
+      </a>
+      <a href="#tambah-ibadah" class="nav-item" data-page="tambah-ibadah">
+        <span class="nav-icon">🏛️</span>
+        <span>Tambah Ibadah</span>
+      </a>
+      <a href="#logs" class="nav-item superadmin-only" data-page="logs">
+        <span class="nav-icon">📝</span>
+        <span>Log Aktivitas</span>
+      </a>
+      <a href="#users" class="nav-item superadmin-only" data-page="users">
+        <span class="nav-icon">👥</span>
+        <span>Kelola Admin</span>
+      </a>
+      <a href="#fields" class="nav-item superadmin-only" data-page="fields">
+        <span class="nav-icon">⚙️</span>
+        <span>Kolom Form</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">SA</div>
+        <div class="user-details">
+          <div class="user-name" id="userName">Loading...</div>
+          <div class="user-role" id="userRole">Loading...</div>
+        </div>
+      </div>
+      <button class="btn btn-logout" id="logoutBtn">Keluar</button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <header class="top-bar">
+      <button class="menu-toggle" id="menuToggle">☰</button>
+      <h1 class="page-title" id="pageTitle">Dashboard</h1>
+      <div class="top-bar-actions">
+        <button class="btn btn-sm" id="changePasswordBtn">Ganti Password</button>
+      </div>
+    </header>
+
+    <!-- Page Container -->
+    <div class="page-container" id="pageContainer">
+      <!-- Pages will be dynamically loaded here -->
+    </div>
+  </main>
+
+  <!-- Modal Container -->
+  <div id="modalContainer"></div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="/vendor/leaflet/leaflet.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/app.js"></script>
+  <script src="/js/dashboard.js"></script>
+  <script src="/js/form.js"></script>
+  <script src="/js/disaster.js"></script>
+  <script src="/js/worship.js"></script>
+  <script src="/js/map.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>
