@@ -106,31 +106,60 @@ const Toast = (() => {
 
 const Modal = (() => {
   let current = null;
+  let returnFocus = null;
+  let previousOverflow = '';
 
   function open(content, opts = {}) {
     close();
+    returnFocus = document.activeElement;
+    previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.innerHTML = `
-      <div class="modal ${opts.large ? 'modal-lg' : ''}" role="dialog" aria-modal="true">
+      <div class="modal ${opts.large ? 'modal-lg' : ''}" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-header">
-          <h3>${App.escapeHtml(opts.title || 'Dialog')}</h3>
+          <h3 id="modalTitle">${App.escapeHtml(opts.title || 'Dialog')}</h3>
           <button class="modal-close" aria-label="Tutup">${Icon.i('x')}</button>
         </div>
         <div class="modal-body">${content}</div>
         ${opts.footer ? `<div class="modal-footer">${opts.footer}</div>` : ''}
       </div>
     `;
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-    overlay.querySelector('.modal-close').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay && opts.dismissible !== false) close();
+    });
+    overlay.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && opts.dismissible !== false) {
+        e.preventDefault();
+        close();
+      }
+      if (e.key === 'Tab') {
+        const focusable = [...overlay.querySelectorAll('button:not([disabled]):not([hidden]), input:not([disabled]):not([hidden]), select:not([disabled]):not([hidden]), textarea:not([disabled]):not([hidden]), a[href]:not([hidden]), [tabindex]:not([tabindex="-1"]):not([hidden])')];
+        if (!focusable.length) return;
+        const first = focusable[0], last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    });
+    const closeButton = overlay.querySelector('.modal-close');
+    if (opts.dismissible === false) closeButton.hidden = true;
+    else closeButton.addEventListener('click', close);
     document.getElementById('modalContainer').appendChild(overlay);
     current = overlay;
     if (opts.onOpen) opts.onOpen(overlay);
+    const initialFocus = overlay.querySelector('[autofocus], input:not([disabled]), button:not([disabled])');
+    (initialFocus || overlay.querySelector('.modal-close')).focus();
     return overlay;
   }
 
   function close() {
-    if (current) { current.remove(); current = null; }
+    if (!current) return;
+    current.remove();
+    current = null;
+    document.body.style.overflow = previousOverflow;
+    if (returnFocus && typeof returnFocus.focus === 'function' && document.contains(returnFocus)) returnFocus.focus();
+    returnFocus = null;
   }
 
   function confirm(title, message, onConfirm) {

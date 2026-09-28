@@ -41,7 +41,11 @@ const Dashboard = (() => {
       item.addEventListener('click', (e) => {
         e.preventDefault();
         const page = item.dataset.page;
-        window.location.hash = page;
+        if (window.location.hash.slice(1) === page) {
+          navigateTo(page);
+        } else {
+          window.location.hash = page;
+        }
       });
     });
     window.addEventListener('hashchange', () => {
@@ -96,6 +100,7 @@ const Dashboard = (() => {
     `;
     Modal.open(html, {
       title: 'Ganti Password',
+      dismissible: !mustReset,
       footer: `
         ${!mustReset ? '<button class="btn btn-secondary" onclick="Modal.close()">Batal</button>' : ''}
         <button class="btn btn-primary" id="cpSubmit">Simpan</button>
@@ -122,6 +127,12 @@ const Dashboard = (() => {
   }
 
   async function navigateTo(page) {
+    if ((page === 'logs' || page === 'users') && !Auth.isSuperadmin()) {
+      Toast.error('Halaman ini hanya tersedia untuk Superadmin.');
+      window.history.replaceState(null, '', '#dashboard');
+      page = 'dashboard';
+    }
+    window.scrollTo(0, 0);
     document.querySelectorAll('.nav-item').forEach(el => {
       el.classList.toggle('active', el.dataset.page === page);
     });
@@ -210,6 +221,10 @@ const Dashboard = (() => {
     try {
       const data = await App.api('/api/stats');
       container.innerHTML = `
+        <div class="dashboard-intro">
+          <div><span class="intro-kicker">Kecamatan Medan Johor</span><h2>Ringkasan data wilayah</h2><p>Pantau data usaha, kebencanaan, dan rumah ibadah dalam satu tampilan.</p></div>
+          <div class="intro-date">${new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}</div>
+        </div>
         <div class="stats-grid">
           ${statBox('store', 'blue', data.totals.total, 'Total Usaha')}
           ${statBox('badge', 'green', data.totals.izin, 'Usaha Berizin')}
