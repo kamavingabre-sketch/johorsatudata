@@ -8,7 +8,7 @@ const Dashboard = (() => {
   async function init() {
     user = await Auth.me();
     if (!user) {
-      window.location.href = '/';
+      window.location.href = '/login.html';
       return;
     }
     document.getElementById('loadingOverlay').classList.add('hidden');

@@ -24,7 +24,7 @@ const Auth = (() => {
     } catch {}
     currentUser = null;
     localStorage.removeItem('user');
-    window.location.href = '/';
+    window.location.href = '/login.html';
   }
 
   async function me() {
@@ -65,7 +65,7 @@ const Auth = (() => {
   function requireAuth() {
     const u = getUser();
     if (!u) {
-      window.location.href = '/';
+      window.location.href = '/login.html';
       return false;
     }
     return true;
