@@ -83,43 +83,57 @@ const Dashboard = (() => {
     const html = `
       <form id="changePasswordForm">
         <div class="form-group">
-          <label>Password Lama</label>
-          <input type="password" name="current" required autocomplete="current-password">
+          <label for="cpCurrent">Password Lama</label>
+          <input id="cpCurrent" type="password" name="current" required autocomplete="current-password">
         </div>
         <div class="form-group">
-          <label>Password Baru (minimal 8 karakter)</label>
-          <input type="password" name="next" required minlength="8" autocomplete="new-password">
+          <label for="cpNext">Password Baru (minimal 8 karakter)</label>
+          <input id="cpNext" type="password" name="next" required minlength="8" autocomplete="new-password">
         </div>
         <div class="form-group">
-          <label>Konfirmasi Password Baru</label>
-          <input type="password" name="confirm" required minlength="8" autocomplete="new-password">
+          <label for="cpConfirm">Konfirmasi Password Baru</label>
+          <input id="cpConfirm" type="password" name="confirm" required minlength="8" autocomplete="new-password">
         </div>
-        <div class="form-error" id="cpError"></div>
-        ${mustReset ? '<p class="text-muted mb-2">Anda wajib mengubah password sebelum melanjutkan.</p>' : ''}
+        <div class="form-error" id="cpError" role="alert"></div>
+        ${mustReset ? '<p class="text-muted mb-2">Anda wajib mengubah password sebelum melanjutkan. Bila belum siap, Anda bisa keluar dan login kembali kapan saja.</p>' : ''}
       </form>
     `;
     Modal.open(html, {
       title: 'Ganti Password',
       dismissible: !mustReset,
       footer: `
-        ${!mustReset ? '<button class="btn btn-secondary" onclick="Modal.close()">Batal</button>' : ''}
-        <button class="btn btn-primary" id="cpSubmit">Simpan</button>
+        ${!mustReset ? '<button type="button" class="btn btn-secondary" onclick="Modal.close()">Batal</button>' : ''}
+        ${mustReset ? '<button type="button" class="btn btn-secondary" id="cpLogout">Keluar</button>' : ''}
+        <button type="submit" class="btn btn-primary" id="cpSubmit" form="changePasswordForm">Simpan</button>
       `,
       onOpen: (el) => {
-        el.querySelector('#cpSubmit').addEventListener('click', async () => {
-          const form = el.querySelector('#changePasswordForm');
-          const errBox = el.querySelector('#cpError');
+        const form = el.querySelector('#changePasswordForm');
+        const errBox = el.querySelector('#cpError');
+        const submitBtn = el.querySelector('#cpSubmit');
+        // Modal wajib-ganti tidak bisa ditutup, jadi sediakan jalan keluar via tombol Keluar.
+        const logoutBtn = el.querySelector('#cpLogout');
+        if (logoutBtn) logoutBtn.addEventListener('click', () => Auth.logout());
+
+        // Tombol submit berada di luar <form>, jadi andalkan submit (Enter pun tetap jalan).
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
           errBox.textContent = '';
           if (form.next.value !== form.confirm.value) {
             errBox.textContent = 'Konfirmasi password tidak cocok.';
+            form.confirm.focus();
             return;
           }
+          submitBtn.disabled = true;
+          const label = submitBtn.textContent;
+          submitBtn.textContent = 'Menyimpan…';
           try {
             await Auth.changePassword(form.current.value, form.next.value);
             Toast.success('Password berhasil diubah.');
             Modal.close();
-          } catch (e) {
-            errBox.textContent = e.message;
+          } catch (err) {
+            errBox.textContent = err.message;
+            submitBtn.disabled = false;
+            submitBtn.textContent = label;
           }
         });
       },

@@ -114,23 +114,26 @@ const Modal = (() => {
     returnFocus = document.activeElement;
     previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    // Modal yang tidak bisa ditutup (mis. wajib ganti password) tidak boleh
+    // menampilkan tombol X yang mati: render hanya bila modal bisa ditutup.
+    const dismissible = opts.dismissible !== false;
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.innerHTML = `
       <div class="modal ${opts.large ? 'modal-lg' : ''}" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-header">
           <h3 id="modalTitle">${App.escapeHtml(opts.title || 'Dialog')}</h3>
-          <button class="modal-close" aria-label="Tutup">${Icon.i('x')}</button>
+          ${dismissible ? `<button type="button" class="modal-close" aria-label="Tutup">${Icon.i('x')}</button>` : ''}
         </div>
         <div class="modal-body">${content}</div>
         ${opts.footer ? `<div class="modal-footer">${opts.footer}</div>` : ''}
       </div>
     `;
     overlay.addEventListener('click', (e) => {
-      if (e.target === overlay && opts.dismissible !== false) close();
+      if (e.target === overlay && dismissible) close();
     });
     overlay.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && opts.dismissible !== false) {
+      if (e.key === 'Escape' && dismissible) {
         e.preventDefault();
         close();
       }
@@ -143,13 +146,17 @@ const Modal = (() => {
       }
     });
     const closeButton = overlay.querySelector('.modal-close');
-    if (opts.dismissible === false) closeButton.hidden = true;
-    else closeButton.addEventListener('click', close);
+    if (closeButton) closeButton.addEventListener('click', close);
     document.getElementById('modalContainer').appendChild(overlay);
     current = overlay;
     if (opts.onOpen) opts.onOpen(overlay);
-    const initialFocus = overlay.querySelector('[autofocus], input:not([disabled]), button:not([disabled])');
-    (initialFocus || overlay.querySelector('.modal-close')).focus();
+    // Prioritas: [autofocus] > field pertama > tombol (bukan urutan dokumen,
+    // jika tidak fokus mendarat di tombol X di header).
+    const initialFocus = overlay.querySelector('[autofocus]')
+      || overlay.querySelector('input:not([disabled]), select:not([disabled]), textarea:not([disabled])')
+      || overlay.querySelector('button:not([disabled])');
+    const focusTarget = initialFocus || closeButton;
+    if (focusTarget) focusTarget.focus();
     return overlay;
   }
 
