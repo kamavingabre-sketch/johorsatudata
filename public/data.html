@@ -19,7 +19,6 @@
     .pub-header .brand svg { width: 38px; height: 38px; }
     .pub-header .brand-name { font-size: 18px; font-weight: 730; color: var(--green-800); letter-spacing: -.02em; }
     .pub-header .brand-sub { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
-    .pub-header .header-right { display: flex; align-items: center; gap: 12px; }
 
     /* Summary cards */
     .pub-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
@@ -125,37 +124,65 @@
     .pub-header .brand-name { font-size: 16px; }
     .pub-header .brand-sub { font-size: 11px; }
     .pub-stats, .pub-tabs, #pubToolbar, .pub-footer { display: none !important; }
-    #contentArea { position: fixed; inset: 0; z-index: 1; }
-    .pub-map-wrap { position: absolute; inset: 0; margin: 0; }
-    .pub-map-shell { position: absolute; inset: 0; display: block; height: auto; border: 0; border-radius: 0; overflow: visible; background: transparent; }
+    /* Kanvas peta selalu memenuhi seluruh viewport, termasuk di HP */
+    #contentArea { position: fixed; inset: 0; z-index: 1; width: 100%; height: 100%; }
+    .pub-map-wrap { position: absolute; inset: 0; margin: 0; width: 100%; height: 100%; }
+    .pub-map-shell { position: absolute; inset: 0; display: block; width: 100%; height: 100%; border: 0; border-radius: 0; overflow: visible; background: transparent; }
     .pub-map-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
     .pub-map-canvas .leaflet-container { height: 100%; width: 100%; background: #e9eee9; }
     .pub-map-side { position: absolute; z-index: 500; top: 94px; left: 18px; width: 300px; max-height: calc(100vh - 116px); padding: 16px; gap: 14px; border: 1px solid rgba(20,50,35,.12); border-radius: 14px; background: rgba(255,255,255,.96); box-shadow: 0 8px 28px rgba(16,40,27,.14); backdrop-filter: blur(12px); }
     .pub-map-layers { display: flex; flex-direction: column; gap: 3px; }
     .pub-map-layers label { padding: 7px 2px; font-size: 13px; }
     .pub-map-side .map-search input { background: #f7f8f5; }
+
+    /* Kepala panel + tombol buka/tutup panel cari & filter */
+    .map-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .map-panel-title { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+    .map-panel-close { display: none; width: 28px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink-2); cursor: pointer; }
+    .map-panel-close svg { width: 14px; height: 14px; }
+    .map-panel-toggle {
+      display: none; position: absolute; z-index: 600; top: 74px; left: 10px;
+      align-items: center; gap: 8px; height: 40px; padding: 0 14px;
+      border: 1px solid rgba(20,50,35,.12); border-radius: 12px;
+      background: rgba(255,255,255,.96); color: var(--ink);
+      font: inherit; font-size: 13px; font-weight: 640; cursor: pointer;
+      box-shadow: 0 6px 20px rgba(16,40,27,.18); backdrop-filter: blur(10px);
+    }
+    .map-panel-toggle svg { width: 15px; height: 15px; color: var(--green-700); }
+    .map-panel-toggle .mp-count { padding: 1px 7px; border-radius: 999px; background: var(--green-100, #e5f3ea); color: var(--green-700); font-size: 11px; font-weight: 700; }
+
+    /* Kontrol Leaflet digeser agar tidak tertutup panel cari & filter */
     .leaflet-top.leaflet-right { top: 90px; }
     .leaflet-bottom.leaflet-right { bottom: 16px; right: 16px; }
     #modalContainer { position: relative; z-index: 2000; }
-    @media (max-width: 600px) {
+
+    /* ---- Layar kecil: peta penuh, panel cari & filter jadi laci yang bisa ditutup ---- */
+    @media (max-width: 900px) {
       .pub-header { top: 10px; left: 10px; padding: 8px 11px; }
-      .pub-header .header-right { gap: 6px; }
-      .pub-header .btn { padding: 7px 9px; font-size: 11px; }
-      .pub-map-side { top: 76px; left: 10px; width: min(285px, calc(100vw - 20px)); max-height: min(42vh, 340px); }
-      .leaflet-top.leaflet-right { top: auto; bottom: 60px; }
+      .map-panel-toggle { display: inline-flex; }
+      .map-panel-close { display: inline-grid; place-items: center; }
+      .pub-map-side {
+        top: 122px; left: 10px; right: 10px;
+        width: auto; max-width: 340px;
+        max-height: min(56vh, 380px);
+        max-height: min(56dvh, 380px);
+        opacity: 0; visibility: hidden; transform: translateY(-8px) scale(.98);
+        transition: opacity .18s ease, transform .18s ease, visibility .18s;
+      }
+      .pub-map-side.open { opacity: 1; visibility: visible; transform: none; }
+      /* Kontrol layer & zoom pindah ke bawah kanan supaya tidak ketutup panel.
+         Tumpukan zoom (±62px) + atribusi (±18px) + jarak bawah 18px ≈ 98px, jadi layer ditaruh di 116px. */
+      .leaflet-top.leaflet-right { top: auto; bottom: 116px; }
+      .leaflet-bottom.leaflet-right { bottom: 18px; right: 12px; }
     }
 
     /* Responsive */
     @media (max-width: 860px) {
-      .pub-map-shell { flex-direction: column; height: auto; }
-      .pub-map-side { width: 100%; height: auto; max-height: 200px; border-right: none; border-bottom: 1px solid var(--line); }
-      .pub-map-canvas { height: 380px; }
       .pub-detail-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 500px) {
       .pub-grid { grid-template-columns: 1fr; }
       .pub-stats { grid-template-columns: 1fr; }
-      .pub-header { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
@@ -174,9 +201,6 @@
           <div class="brand-sub">Kecamatan Medan Johor</div>
         </div>
       </a>
-      <div class="header-right">
-        <a href="/login.html" class="btn btn-secondary btn-sm">Masuk Petugas</a>
-      </div>
     </header>
 
     <!-- Summary Stats -->
@@ -239,6 +263,7 @@
       let mapInstance = null;
       let mapLayers = {};
       let mapLoaded = false;
+      let mapItems = [];
 
       /* ---------- Meta ---------- */
       async function getMeta() {
@@ -505,11 +530,18 @@
       /* ---------- Map ---------- */
       function loadMap() {
         const area = document.getElementById('contentArea');
-        if (!mapLoaded) {
+        if (!mapLoaded || !document.getElementById('mapCanvas')) {
           area.innerHTML = `
             <div class="pub-map-wrap">
               <div class="pub-map-shell">
-                <div class="pub-map-side">
+                <button type="button" class="map-panel-toggle" id="mapPanelToggle" aria-expanded="false" aria-controls="mapPanel">
+                  ${Icon.i('filter')}<span>Cari &amp; Filter</span><span class="mp-count" id="mapPanelCount">0</span>
+                </button>
+                <div class="pub-map-side" id="mapPanel">
+                  <div class="map-panel-head">
+                    <span class="map-panel-title">Cari &amp; Filter Peta</span>
+                    <button type="button" class="map-panel-close" id="mapPanelClose" aria-label="Tutup panel">${Icon.i('x')}</button>
+                  </div>
                   <div class="map-search">
                     <span class="search-ico">${Icon.i('search')}</span>
                     <input type="search" id="mapSearch" placeholder="Cari di peta…" autocomplete="off">
@@ -520,10 +552,41 @@
                 <div class="pub-map-canvas" id="mapCanvas"></div>
               </div>
             </div>`;
+          bindMapPanel();
           initMap();
         } else {
           setTimeout(() => { if (mapInstance) mapInstance.invalidateSize(); }, 100);
         }
+      }
+
+      /* Di layar kecil panel cari & filter tampil sebagai laci yang default-nya tertutup,
+         supaya peta penuh dan kontrol peta tidak tertutup panel. */
+      const MOBILE_PANEL = window.matchMedia ? window.matchMedia('(max-width: 900px)') : null;
+      function setMapPanel(open) {
+        const panel = document.getElementById('mapPanel');
+        if (!panel) return;
+        panel.classList.toggle('open', !!open);
+        const btn = document.getElementById('mapPanelToggle');
+        if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      }
+      function bindMapPanel() {
+        const toggle = document.getElementById('mapPanelToggle');
+        const close = document.getElementById('mapPanelClose');
+        if (toggle) toggle.addEventListener('click', () => {
+          const panel = document.getElementById('mapPanel');
+          setMapPanel(!panel.classList.contains('open'));
+        });
+        if (close) close.addEventListener('click', () => setMapPanel(false));
+        document.addEventListener('keydown', (e) => {
+          const panel = document.getElementById('mapPanel');
+          if (e.key === 'Escape' && panel && panel.classList.contains('open')) setMapPanel(false);
+        });
+      }
+      function setMapResultInfo(shown, total) {
+        const info = document.getElementById('mapResultInfo');
+        if (info) info.textContent = shown + ' dari ' + total + ' data ditampilkan';
+        const badge = document.getElementById('mapPanelCount');
+        if (badge) badge.textContent = shown;
       }
 
       const TYPES = {
@@ -560,7 +623,7 @@
         L.control.layers({ 'Peta Jalan': street, 'Citra Satelit': sat }, null, { position: 'topright' }).addTo(mapInstance);
         for (const t of Object.keys(TYPES)) mapLayers[t] = L.layerGroup().addTo(mapInstance);
 
-        const mapItems = [];
+        mapItems = [];
 
         // Load data
         const safe = async (url, fn) => { try { const r = await fetch(url); fn(await r.json()); } catch(e) { console.error(e); } };
@@ -612,7 +675,7 @@
           const el = document.getElementById('mcnt-' + t);
           if (el) el.textContent = counts[t].total;
         }
-        document.getElementById('mapResultInfo').textContent = mapItems.length + ' data ditampilkan';
+        setMapResultInfo(mapItems.length, mapItems.length);
 
         layersEl.querySelectorAll('[data-mlayer]').forEach(cb => {
           cb.addEventListener('change', () => {
@@ -625,15 +688,28 @@
         // Search
         document.getElementById('mapSearch').addEventListener('input', function() {
           const q = this.value.trim().toLowerCase();
+          let shown = 0;
           for (const it of mapItems) {
             const visible = !q || it.name.toLowerCase().includes(q) || it.kel.toLowerCase().includes(q) || it.sub.toLowerCase().includes(q);
+            if (visible) shown++;
             const inLayer = mapLayers[it.type].hasLayer(it.marker);
             if (visible && !inLayer) mapLayers[it.type].addLayer(it.marker);
             if (!visible && inLayer) mapLayers[it.type].removeLayer(it.marker);
           }
+          setMapResultInfo(shown, mapItems.length);
         });
 
-        setTimeout(() => mapInstance.invalidateSize(), 200);
+        // Di HP, tutup laci setelah Enter supaya hasil pencarian di peta langsung terlihat
+        document.getElementById('mapSearch').addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && MOBILE_PANEL && MOBILE_PANEL.matches) setMapPanel(false);
+        });
+
+        /* Pastikan peta selalu pas dengan ukuran layar (rotasi HP, address bar muncul/hilang) */
+        const refit = () => { if (mapInstance) mapInstance.invalidateSize(); };
+        window.addEventListener('orientationchange', () => setTimeout(refit, 250));
+        if (window.visualViewport) window.visualViewport.addEventListener('resize', () => setTimeout(refit, 120));
+
+        setTimeout(refit, 200);
       }
 
       /* ---------- Detail Modal ---------- */
