@@ -20,7 +20,7 @@ const Worship = (() => {
           <option value="">Semua Agama</option>
           ${(meta.enums.agama || []).map(k => `<option value="${k}">${k}</option>`).join('')}
         </select>
-        <a href="#tambah-ibadah" class="btn btn-primary btn-sm">+ Tambah Ibadah</a>
+        <a href="#tambah-ibadah" class="btn btn-primary btn-sm">${Icon.i('plus')} Tambah Ibadah</a>
       </div>
       <div id="worshipTableContainer"><div class="loading">Memuat...</div></div>
     `;
@@ -51,7 +51,7 @@ const Worship = (() => {
   }
 
   function renderTable(data) {
-    if (!data.rows.length) return `<div class="empty-state"><div class="empty-state-icon">🕌</div><h3>Belum ada data rumah ibadah</h3><p>Tambahkan data rumah ibadah baru.</p></div>`;
+    if (!data.rows.length) return `<div class="empty-state"><div class="empty-state-icon">${Icon.i('landmark')}</div><h3>Belum ada data rumah ibadah</h3><p>Tambahkan data rumah ibadah baru.</p></div>`;
     let html = `<div class="data-table-wrap"><table class="data-table">
       <thead><tr>
         <th>Kode</th><th>Nama</th><th>Kelurahan</th><th>Jenis</th><th>Agama</th><th>Alamat</th>
@@ -61,19 +61,19 @@ const Worship = (() => {
     for (const r of data.rows) {
       const canEdit = Auth.isSuperadmin() || r.owner_id === user.id;
       html += `<tr>
-        <td><code>${App.escapeHtml(r.ref)}</code></td>
-        <td><a href="#detail-ibadah/${r.id}"><strong>${App.escapeHtml(r.nama)}</strong></a></td>
-        <td>${r.kelurahan ? `<span class="tag tag-blue">${App.escapeHtml(r.kelurahan)}</span>` : '<span class="text-muted">-</span>'}</td>
-        <td><span class="tag">${App.escapeHtml(r.jenis)}</span></td>
-        <td>${App.escapeHtml(r.agama || '-')}</td>
-        <td title="${App.escapeHtml(r.alamat)}">${App.escapeHtml(r.alamat.substring(0, 40))}${r.alamat.length > 40 ? '...' : ''}</td>
-        <td>${App.escapeHtml(r.nama_pengelola || '-')}</td>
-        <td>${App.escapeHtml(r.hp_pengelola || '-')}</td>
-        <td><small>${App.escapeHtml(r.owner_nama || '-')}</small></td>
-        <td class="actions">
-          <button class="btn btn-sm btn-ghost" onclick="window.location.hash='detail-ibadah/${r.id}'" title="Detail">👁️</button>
-          ${canEdit ? `<button class="btn btn-sm btn-ghost" onclick="window.location.hash='edit-ibadah/${r.id}'" title="Edit">✏️</button>` : ''}
-          ${canEdit ? `<button class="btn btn-sm btn-ghost" data-del-w="${r.id}" data-nama="${App.escapeHtml(r.nama)}" title="Hapus">🗑️</button>` : ''}
+        <td data-label="Kode"><code>${App.escapeHtml(r.ref)}</code></td>
+        <td data-label="Nama"><a href="#detail-ibadah/${r.id}">${App.escapeHtml(r.nama)}</a></td>
+        <td data-label="Kelurahan">${r.kelurahan ? `<span class="tag tag-blue">${App.escapeHtml(r.kelurahan)}</span>` : '<span class="text-muted">-</span>'}</td>
+        <td data-label="Jenis"><span class="tag">${App.escapeHtml(r.jenis)}</span></td>
+        <td data-label="Agama">${App.escapeHtml(r.agama || '-')}</td>
+        <td data-label="Alamat" title="${App.escapeHtml(r.alamat)}">${App.escapeHtml(r.alamat.substring(0, 40))}${r.alamat.length > 40 ? '…' : ''}</td>
+        <td data-label="Pengurus">${App.escapeHtml(r.nama_pengelola || '-')}</td>
+        <td data-label="HP">${App.escapeHtml(r.hp_pengelola || '-')}</td>
+        <td data-label="Pendata"><small>${App.escapeHtml(r.owner_nama || '-')}</small></td>
+        <td class="actions" data-label="Aksi">
+          <button class="btn-icon" onclick="window.location.hash='detail-ibadah/${r.id}'" title="Detail" aria-label="Detail">${Icon.i('eye')}</button>
+          ${canEdit ? `<button class="btn-icon" onclick="window.location.hash='edit-ibadah/${r.id}'" title="Edit" aria-label="Edit">${Icon.i('pencil')}</button>
+          <button class="btn-icon is-danger" data-del-w="${r.id}" data-nama="${App.escapeHtml(r.nama)}" title="Hapus" aria-label="Hapus">${Icon.i('trash')}</button>` : ''}
         </td>
       </tr>`;
     }
@@ -81,10 +81,10 @@ const Worship = (() => {
     const totalPages = Math.ceil(data.total / data.per);
     if (totalPages > 1) {
       html += '<div class="pagination">';
-      html += `<button ${data.page <= 1 ? 'disabled' : ''} onclick="window._setWorshipPage(${data.page - 1})">‹ Prev</button>`;
+      html += `<button ${data.page <= 1 ? 'disabled' : ''} onclick="window._setWorshipPage(${data.page - 1})">‹ Sebelumnya</button>`;
       for (let i = 1; i <= Math.min(totalPages, 7); i++)
         html += `<button class="${i === data.page ? 'active' : ''}" onclick="window._setWorshipPage(${i})">${i}</button>`;
-      html += `<button ${data.page >= totalPages ? 'disabled' : ''} onclick="window._setWorshipPage(${data.page + 1})">Next ›</button></div>`;
+      html += `<button ${data.page >= totalPages ? 'disabled' : ''} onclick="window._setWorshipPage(${data.page + 1})">Berikutnya ›</button></div>`;
     }
     return html;
   }
@@ -98,7 +98,7 @@ const Worship = (() => {
         const data = await App.api(`/api/worship/${id}`);
         worship = data.worship;
       } catch (e) {
-        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><h3>Error</h3><p>${App.escapeHtml(e.message)}</p></div>`;
+        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${Icon.i('alert-circle')}</div><h3>Terjadi Kesalahan</h3><p>${App.escapeHtml(e.message)}</p></div>`;
         return;
       }
     }
@@ -111,7 +111,7 @@ const Worship = (() => {
         </div>
         <form id="worshipForm" class="form-card-body" enctype="multipart/form-data">
           <div class="form-section">
-            <div class="form-section-title">Informasi Rumah Ibadah</div>
+            <div class="form-section-title">${Icon.i('landmark')} Informasi Rumah Ibadah</div>
             <div class="form-group">
               <label>Nama Rumah Ibadah <span class="required">*</span></label>
               <input type="text" name="nama" required value="${isEdit ? App.escapeHtml(worship.nama) : ''}" placeholder="Contoh: Masjid Al-Ikhlas, HKBP Johor">
@@ -144,7 +144,7 @@ const Worship = (() => {
           </div>
 
           <div class="form-section">
-            <div class="form-section-title">Pengurus</div>
+            <div class="form-section-title">${Icon.i('user')} Pengurus</div>
             <div class="form-row">
               <div class="form-group">
                 <label>Nama Pengurus</label>
@@ -158,13 +158,13 @@ const Worship = (() => {
           </div>
 
           <div class="form-section">
-            <div class="form-section-title">Titik Lokasi Rumah Ibadah</div>
+            <div class="form-section-title">${Icon.i('map-pin')} Titik Lokasi Rumah Ibadah</div>
             <div class="form-group">
               <div class="hint mb-1">Pilih lokasi: (1) klik peta, (2) input koordinat manual, atau (3) gunakan GPS perangkat Anda.</div>
               <div class="location-picker">
                 <div class="location-picker-map" id="worshipMap"></div>
                 <div class="location-picker-info">
-                  <span>📍</span>
+                  ${Icon.i('map-pin')}
                   <span id="coordDisplay">${isEdit && worship.lat ? `${worship.lat.toFixed(6)}, ${worship.lng.toFixed(6)}` : 'Belum ada lokasi dipilih'}</span>
                 </div>
               </div>
@@ -179,8 +179,8 @@ const Worship = (() => {
                 </div>
               </div>
               <div class="flex gap-1 mt-1">
-                <button type="button" class="btn btn-sm btn-outline" id="gpsBtn">📡 Gunakan GPS Saya</button>
-                <button type="button" class="btn btn-sm btn-secondary" id="applyCoordBtn">📍 Terapkan Koordinat</button>
+                <button type="button" class="btn btn-sm btn-outline" id="gpsBtn">${Icon.i('crosshair')} Gunakan GPS Saya</button>
+                <button type="button" class="btn btn-sm btn-secondary" id="applyCoordBtn">${Icon.i('map-pin')} Terapkan Koordinat</button>
               </div>
               <div class="hint mt-1" id="gpsStatus"></div>
             </div>
@@ -225,19 +225,19 @@ const Worship = (() => {
     });
 
     document.getElementById('gpsBtn').addEventListener('click', () => {
-      if (!navigator.geolocation) { gpsStatus.textContent = '⚠️ Browser tidak mendukung GPS.'; return; }
-      gpsStatus.textContent = '⏳ Mengambil lokasi GPS...';
+      if (!navigator.geolocation) { gpsStatus.textContent = 'Browser tidak mendukung GPS.'; return; }
+      gpsStatus.textContent = 'Mengambil lokasi GPS…';
       document.getElementById('gpsBtn').disabled = true;
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           latInput.value = pos.coords.latitude; lngInput.value = pos.coords.longitude;
           syncManual();
           if (window._worshipSetLocation) window._worshipSetLocation(pos.coords.latitude, pos.coords.longitude);
-          gpsStatus.textContent = `✅ Lokasi GPS ditemukan (±${Math.round(pos.coords.accuracy)}m).`;
+          gpsStatus.textContent = `Lokasi GPS ditemukan (±${Math.round(pos.coords.accuracy)}m).`;
           document.getElementById('gpsBtn').disabled = false;
         },
         () => {
-          gpsStatus.textContent = '⚠️ Gagal mengambil GPS. Izinkan akses lokasi di browser.';
+          gpsStatus.textContent = 'Gagal mengambil GPS. Izinkan akses lokasi di browser.';
           document.getElementById('gpsBtn').disabled = false;
         },
         { enableHighAccuracy: true, timeout: 15000 }
@@ -312,14 +312,14 @@ const Worship = (() => {
           <div class="card-header">
             <h3>${App.escapeHtml(w.ref)} — ${App.escapeHtml(w.nama)}</h3>
             <div class="flex gap-1">
-              ${canEdit ? `<button class="btn btn-sm btn-primary" onclick="window.location.hash='edit-ibadah/${w.id}'">✏️ Edit</button>` : ''}
-              <button class="btn btn-sm btn-secondary" onclick="window.location.hash='ibadah'">← Kembali</button>
+              ${canEdit ? `<button class="btn btn-sm btn-primary" onclick="window.location.hash='edit-ibadah/${w.id}'">${Icon.i('pencil')} Edit</button>` : ''}
+              <button class="btn btn-sm btn-secondary" onclick="window.location.hash='ibadah'">${Icon.i('arrow-left')} Kembali</button>
             </div>
           </div>
           <div class="card-body">
             <div class="detail-grid">
               <div class="detail-images">
-                ${w.foto ? `<img src="${w.foto}" alt="Foto">` : '<div class="empty-state" style="padding:20px"><p>Tidak ada foto</p></div>'}
+                ${w.foto ? `<figure><figcaption>Foto Rumah Ibadah</figcaption><img src="${w.foto}" alt="Foto"></figure>` : '<div class="no-photo">Tidak ada foto</div>'}
               </div>
               <div class="detail-info">
                 <dl>
@@ -349,13 +349,13 @@ const Worship = (() => {
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(m);
         const icon = L.divIcon({
           className: 'custom-marker-wrapper',
-          html: `<div class="custom-marker" style="background:#8b5cf6"><span>🏛️</span></div>`,
-          iconSize: [36, 36], iconAnchor: [18, 36]
+          html: `<div class="custom-marker" style="background:#5e4187"><span class="pin-icon">${Icon.i('landmark')}</span></div>`,
+          iconSize: [34, 34], iconAnchor: [17, 34]
         });
         L.marker([w.lat, w.lng], { icon }).addTo(m).bindPopup(`<strong>${App.escapeHtml(w.nama)}</strong>`).openPopup();
       }
     } catch (e) {
-      container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><h3>Error</h3><p>${App.escapeHtml(e.message)}</p></div>`;
+      container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${Icon.i('alert-circle')}</div><h3>Terjadi Kesalahan</h3><p>${App.escapeHtml(e.message)}</p></div>`;
     }
   }
 

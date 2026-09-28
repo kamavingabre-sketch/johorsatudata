@@ -10,10 +10,10 @@ const MapModule = (() => {
   const state = { q: '', kel: '', layers: { business: true, disaster: true, gathering: true, worship: true } };
 
   const TYPES = {
-    business:  { label: 'Usaha',         color: '#3b82f6', emoji: '🏪' },
-    disaster:  { label: 'Rawan Bencana', color: '#ef4444', emoji: '🌊' },
-    gathering: { label: 'Titik Kumpul',  color: '#10b981', emoji: '🏕️' },
-    worship:   { label: 'Rumah Ibadah',  color: '#8b5cf6', emoji: '🏛️' },
+    business:  { label: 'Usaha',         color: '#275e8e', glyph: 'store' },
+    disaster:  { label: 'Rawan Bencana', color: '#b23730', glyph: 'warning' },
+    gathering: { label: 'Titik Kumpul',  color: '#1e7d46', glyph: 'tent' },
+    worship:   { label: 'Rumah Ibadah',  color: '#5e4187', glyph: 'landmark' },
   };
   const CATEGORY_COLORS = {
     'PERDAGANGAN': '#1a73e8', 'KULINER': '#ea4335', 'JASA PERAWATAN KECANTIKAN': '#e91e63',
@@ -23,10 +23,10 @@ const MapModule = (() => {
   };
   const JOHOR_CENTER = [3.5750, 98.6400];
 
-  function makeIcon(emoji, color, size = 34) {
+  function makeIcon(glyph, color, size = 34) {
     return L.divIcon({
       className: 'custom-marker-wrapper',
-      html: `<div class="custom-marker" style="background:${color}"><span>${emoji}</span></div>`,
+      html: `<div class="custom-marker" style="background:${color}"><span class="pin-icon">${Icon.i(glyph)}</span></div>`,
       iconSize: [size, size], iconAnchor: [size / 2, size], popupAnchor: [0, -size],
     });
   }
@@ -39,43 +39,43 @@ const MapModule = (() => {
   function popupBusiness(p) {
     return `<div class="map-popup">${photo(p.foto_usaha)}
       <h3>${esc(p.nama_usaha)}</h3>
-      <div class="popup-meta">${kelTag(p.kelurahan)}<span class="tag">${App.kategoriIcon(p.kategori_usaha)} ${esc(p.kategori_usaha)}</span></div>
-      <p>📍 ${esc(p.alamat)}</p>
-      <p>👤 ${esc(p.nama_pic)} — ${esc(p.hp_pic)}</p>
-      <div class="popup-meta"><span class="tag">${esc(p.jenis_kepemilikan)}</span>${p.skala_usaha ? `<span class="tag">${App.label('SKALA_USAHA', p.skala_usaha)}</span>` : ''}${p.jumlah_pekerja ? `<span class="tag">👥 ${App.label('JUMLAH_PEKERJA', p.jumlah_pekerja)}</span>` : ''}
+      <div class="popup-meta">${kelTag(p.kelurahan)}<span class="tag">${esc(p.kategori_usaha)}</span></div>
+      <p>${Icon.i('map-pin')} ${esc(p.alamat)}</p>
+      <p>${Icon.i('user')} ${esc(p.nama_pic)} — ${esc(p.hp_pic)}</p>
+      <div class="popup-meta"><span class="tag">${esc(p.jenis_kepemilikan)}</span>${p.skala_usaha ? `<span class="tag">${App.label('SKALA_USAHA', p.skala_usaha)}</span>` : ''}${p.jumlah_pekerja ? `<span class="tag">${App.label('JUMLAH_PEKERJA', p.jumlah_pekerja)}</span>` : ''}
         ${p.izin_usaha ? '<span class="tag tag-green">Berizin</span>' : '<span class="tag tag-red">Tanpa Izin</span>'}</div>
       <button class="btn btn-primary btn-sm" onclick="window.location.hash='detail/${p.id}'">Lihat Detail</button></div>`;
   }
   function popupDisaster(p) {
     return `<div class="map-popup">${photo(p.foto)}
-      <h3>⚠️ ${esc(p.nama_lokasi)}</h3>
-      <div class="popup-meta">${kelTag(p.kelurahan)}<span class="tag tag-orange">🌊 ${esc(p.jenis_bencana)}</span></div>
-      <p>📍 ${esc(p.alamat)}</p>
-      <p>⚡ Penyebab: ${esc(p.penyebab)}</p>
-      ${p.jumlah_rumah ? `<p>🏠 Rumah terdampak: ${esc(p.jumlah_rumah)}</p>` : ''}
-      ${p.jumlah_kk ? `<p>👨‍👩‍👧 KK terdampak: ${esc(p.jumlah_kk)}</p>` : ''}
+      <h3>${esc(p.nama_lokasi)}</h3>
+      <div class="popup-meta">${kelTag(p.kelurahan)}<span class="tag tag-orange">${esc(p.jenis_bencana)}</span></div>
+      <p>${Icon.i('map-pin')} ${esc(p.alamat)}</p>
+      <p>${Icon.i('info')} Penyebab: ${esc(p.penyebab)}</p>
+      ${p.jumlah_rumah ? `<p>${Icon.i('building')} Rumah terdampak: ${esc(p.jumlah_rumah)}</p>` : ''}
+      ${p.jumlah_kk ? `<p>${Icon.i('users')} KK terdampak: ${esc(p.jumlah_kk)}</p>` : ''}
       <button class="btn btn-danger btn-sm" onclick="window.location.hash='detail-bencana/${p.id}'">Lihat Detail</button></div>`;
   }
   function popupGathering(p) {
     return `<div class="map-popup">${photo(p.titik_kumpul_foto)}
-      <h3>🏕️ Titik Kumpul</h3>
+      <h3>Titik Kumpul</h3>
       <div class="popup-meta">${kelTag(p.kelurahan)}<span class="tag tag-green">Posko / Evakuasi</span></div>
-      <p>📍 ${esc(p.titik_kumpul || '-')}</p>
-      <p>🌊 Untuk titik rawan: <strong>${esc(p.nama_lokasi)}</strong> (${esc(p.jenis_bencana)})</p>
+      <p>${Icon.i('map-pin')} ${esc(p.titik_kumpul || '-')}</p>
+      <p>${Icon.i('warning')} Untuk titik rawan: <strong>${esc(p.nama_lokasi)}</strong> (${esc(p.jenis_bencana)})</p>
       <p class="popup-coord">${p.titik_kumpul_lat.toFixed(6)}, ${p.titik_kumpul_lng.toFixed(6)}</p>
       <div class="popup-actions">
-        <a class="btn btn-outline btn-sm" href="${gmapsDir(p.titik_kumpul_lat, p.titik_kumpul_lng)}" target="_blank" rel="noopener">🧭 Rute</a>
+        <a class="btn btn-outline btn-sm" href="${gmapsDir(p.titik_kumpul_lat, p.titik_kumpul_lng)}" target="_blank" rel="noopener">${Icon.i('navigation')} Rute</a>
         <button class="btn btn-primary btn-sm" onclick="window.location.hash='detail-bencana/${p.id}'">Detail</button>
       </div></div>`;
   }
   function popupWorship(p) {
     return `<div class="map-popup">${photo(p.foto)}
       <h3>${esc(p.nama)}</h3>
-      <div class="popup-meta">${kelTag(p.kelurahan)}<span class="tag tag-purple">🏛️ ${esc(p.jenis)}</span></div>
-      <p>🕊️ ${esc(p.agama || '-')}</p>
-      <p>📍 ${esc(p.alamat)}</p>
-      ${p.nama_pengelola ? `<p>👤 ${esc(p.nama_pengelola)}</p>` : ''}
-      ${p.hp_pengelola ? `<p>📞 ${esc(p.hp_pengelola)}</p>` : ''}
+      <div class="popup-meta">${kelTag(p.kelurahan)}<span class="tag tag-purple">${esc(p.jenis)}</span></div>
+      <p>${Icon.i('sparkle')} ${esc(p.agama || '-')}</p>
+      <p>${Icon.i('map-pin')} ${esc(p.alamat)}</p>
+      ${p.nama_pengelola ? `<p>${Icon.i('user')} ${esc(p.nama_pengelola)}</p>` : ''}
+      ${p.hp_pengelola ? `<p>${Icon.i('phone')} ${esc(p.hp_pengelola)}</p>` : ''}
       <button class="btn btn-primary btn-sm" onclick="window.location.hash='detail-ibadah/${p.id}'">Lihat Detail</button></div>`;
   }
 
@@ -133,7 +133,7 @@ const MapModule = (() => {
     box.hidden = false;
     box.innerHTML = hits.length
       ? hits.map((it) => `<button type="button" class="map-result" data-i="${items.indexOf(it)}">
-          <span class="map-result-ico" style="background:${TYPES[it.type].color}">${TYPES[it.type].emoji}</span>
+          <span class="map-result-ico" style="background:${TYPES[it.type].color}">${Icon.i(TYPES[it.type].glyph)}</span>
           <span class="map-result-txt"><strong>${esc(it.name)}</strong><small>${esc(TYPES[it.type].label)}${it.kel ? ' · ' + esc(it.kel) : ''}${it.sub ? ' · ' + esc(it.sub) : ''}</small></span>
         </button>`).join('')
       : '<div class="map-result-empty">Tidak ada data dengan nama tersebut</div>';
@@ -157,14 +157,14 @@ const MapModule = (() => {
       <div class="map-shell">
         <div class="map-panel" id="mapPanel">
           <div class="map-search">
-            <span class="map-search-ico">🔍</span>
+            <span class="map-search-ico">${Icon.i('search')}</span>
             <input type="search" id="mapSearch" placeholder="Cari nama usaha, lokasi, titik kumpul, rumah ibadah…" autocomplete="off">
-            <button type="button" id="mapSearchClear" class="map-search-clear" hidden aria-label="Hapus">✕</button>
+            <button type="button" id="mapSearchClear" class="map-search-clear" hidden aria-label="Hapus">${Icon.i('x')}</button>
           </div>
           <div class="map-results" id="mapResults" hidden></div>
           <div class="map-panel-row">
             <select id="mapKel" class="filter-select">
-              <option value="">📍 Semua Kelurahan</option>
+              <option value="">Semua Kelurahan</option>
               ${(meta.enums.kelurahan || []).map((k) => `<option value="${esc(k)}">${esc(k)}</option>`).join('')}
             </select>
           </div>
@@ -182,7 +182,7 @@ const MapModule = (() => {
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     const street = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(map);
     const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
-    L.control.layers({ '🗺️ Peta': street, '🛰️ Satelit': sat }, null, { position: 'topright' }).addTo(map);
+    L.control.layers({ 'Peta Jalan': street, 'Citra Satelit': sat }, null, { position: 'topright' }).addTo(map);
     for (const t of Object.keys(TYPES)) groups[t] = L.layerGroup().addTo(map);
     setTimeout(() => map.invalidateSize(), 150);
 
@@ -196,24 +196,24 @@ const MapModule = (() => {
 
     await safe('/api/businesses/map/all', (r) => r.places.forEach((p) => {
       if (p.lat == null || p.lng == null) return;
-      addItem('business', p.lat, p.lng, makeIcon(App.kategoriIcon(p.kategori_usaha), CATEGORY_COLORS[p.kategori_usaha] || TYPES.business.color),
+      addItem('business', p.lat, p.lng, makeIcon(Icon.kategori(p.kategori_usaha), CATEGORY_COLORS[p.kategori_usaha] || TYPES.business.color),
         popupBusiness(p), p.nama_usaha, p.kategori_usaha, p.kelurahan, [p.alamat, p.nama_pic, p.ref].join(' '));
     }));
 
     await safe('/api/disasters/map/all', (r) => r.places.forEach((p) => {
       if (p.lat != null && p.lng != null) {
-        addItem('disaster', p.lat, p.lng, makeIcon(TYPES.disaster.emoji, TYPES.disaster.color),
+        addItem('disaster', p.lat, p.lng, makeIcon(TYPES.disaster.glyph, TYPES.disaster.color),
           popupDisaster(p), p.nama_lokasi, p.jenis_bencana, p.kelurahan, [p.alamat, p.penyebab, p.ref].join(' '));
       }
       if (p.titik_kumpul_lat != null && p.titik_kumpul_lng != null) {
-        addItem('gathering', p.titik_kumpul_lat, p.titik_kumpul_lng, makeIcon(TYPES.gathering.emoji, TYPES.gathering.color),
+        addItem('gathering', p.titik_kumpul_lat, p.titik_kumpul_lng, makeIcon(TYPES.gathering.glyph, TYPES.gathering.color),
           popupGathering(p), 'Titik Kumpul — ' + p.nama_lokasi, p.jenis_bencana, p.kelurahan, [p.titik_kumpul, p.alamat, p.ref].join(' '));
       }
     }));
 
     await safe('/api/worship/map/all', (r) => r.places.forEach((p) => {
       if (p.lat == null || p.lng == null) return;
-      addItem('worship', p.lat, p.lng, makeIcon(TYPES.worship.emoji, TYPES.worship.color),
+      addItem('worship', p.lat, p.lng, makeIcon(TYPES.worship.glyph, TYPES.worship.color),
         popupWorship(p), p.nama, p.jenis, p.kelurahan, [p.alamat, p.agama, p.nama_pengelola, p.ref].join(' '));
     }));
   }
