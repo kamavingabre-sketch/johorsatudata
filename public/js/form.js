@@ -59,6 +59,22 @@ const Form = (() => {
                 ${meta.enums.kategori.map(k => `<option value="${k}" ${isEdit && business.kategori_usaha === k ? 'selected' : ''}>${App.kategoriIcon(k)} ${k}</option>`).join('')}
               </select>
             </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Skala Usaha <span class="required">*</span></label>
+                <select name="skala_usaha" required>
+                  <option value="">-- Pilih --</option>
+                  ${(meta.enums.skala_usaha || []).map(k => `<option value="${k}" ${isEdit && business.skala_usaha === k ? 'selected' : ''}>${App.label('SKALA_USAHA', k)}</option>`).join('')}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Jumlah Pekerja <span class="required">*</span></label>
+                <select name="jumlah_pekerja" required>
+                  <option value="">-- Pilih --</option>
+                  ${(meta.enums.jumlah_pekerja || []).map(k => `<option value="${k}" ${isEdit && business.jumlah_pekerja === k ? 'selected' : ''}>${App.label('JUMLAH_PEKERJA', k)}</option>`).join('')}
+                </select>
+              </div>
+            </div>
           </div>
 
           <div class="form-section">
@@ -121,6 +137,13 @@ const Form = (() => {
                 <input type="file" name="foto_usaha" accept="image/jpeg,image/png,image/webp" ${!isEdit ? 'required' : ''}>
                 <div class="file-upload-text">Klik atau seret foto usaha ke sini<br><small>JPG, PNG, WEBP (maks 8 MB)${isEdit ? ' — kosongkan jika tidak ingin mengubah' : ''}</small></div>
               </div>
+            </div>
+            <div class="form-group">
+              <label>Kelurahan <span class="required">*</span></label>
+              <select name="kelurahan" required>
+                <option value="">-- Pilih Kelurahan --</option>
+                ${(meta.enums.kelurahan || []).map(k => `<option value="${App.escapeHtml(k)}" ${isEdit && business.kelurahan === k ? 'selected' : ''}>${App.escapeHtml(k)}</option>`).join('')}
+              </select>
             </div>
             <div class="form-group">
               <label>Alamat / Lokasi Usaha <span class="required">*</span></label>
@@ -326,11 +349,14 @@ const Form = (() => {
           nama_usaha: fd.get('nama_usaha'),
           jenis_kepemilikan: fd.get('jenis_kepemilikan'),
           kategori_usaha: fd.get('kategori_usaha'),
+          skala_usaha: fd.get('skala_usaha'),
+          jumlah_pekerja: fd.get('jumlah_pekerja'),
           izin_usaha: fd.get('izin_usaha'),
           kelengkapan_keamanan: fd.get('kelengkapan_keamanan'),
           nama_pic: fd.get('nama_pic'),
           hp_pic: fd.get('hp_pic'),
           alamat: fd.get('alamat'),
+          kelurahan: fd.get('kelurahan'),
           lat: fd.get('lat'),
           lng: fd.get('lng'),
           extra: JSON.stringify(extra),

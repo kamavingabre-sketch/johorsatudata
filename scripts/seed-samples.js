@@ -33,10 +33,10 @@ const SAMPLES = [
     const ref = genRefCode(seq);
     const ownerId = i % 2 === 0 ? admin.id : superadmin.id;
     db.prepare(
-      `INSERT INTO businesses (ref_code, owner_id, nama_usaha, jenis_kepemilikan, kategori_usaha,
+      `INSERT INTO businesses (ref_code, owner_id, nama_usaha, jenis_kepemilikan, kategori_usaha, skala_usaha, jumlah_pekerja,
         izin_usaha, izin_foto, nama_pic, hp_pic, kelengkapan_keamanan, foto_usaha, alamat, lat, lng, extra)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-    ).run(ref, ownerId, s.nama_usaha, s.jenis, s.kategori, s.izin, null, s.pic, s.hp, s.keamanan, null, s.alamat, s.lat, s.lng, '{}');
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    ).run(ref, ownerId, s.nama_usaha, s.jenis, s.kategori, s.jenis === 'PT' ? 'USAHA KECIL' : 'USAHA MIKRO', s.jenis === 'PT' ? 'DIBAWAH 30' : 'DIBAWAH 10', s.izin, null, s.pic, s.hp, s.keamanan, null, s.alamat, s.lat, s.lng, '{}');
     logAction({ userId: ownerId, username: ownerId === admin.id ? 'admin1' : 'superadmin', nama: ownerId === admin.id ? 'Admin Pertama' : 'Super Administrator', action: 'pendataan.baru', targetType: 'business', targetId: seq, targetName: `${ref} — ${s.nama_usaha}`, detail: `Seed data: ${s.kategori}`, ip: '127.0.0.1' });
   });
 

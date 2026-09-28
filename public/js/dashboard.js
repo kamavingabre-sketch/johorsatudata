@@ -271,6 +271,18 @@ const Dashboard = (() => {
             </div>
           </div>
           <div class="dashboard-card">
+            <div class="card-header"><h3>Per Skala Usaha</h3></div>
+            <div class="card-body">
+              ${renderChart(data.bySkala, 'skala_usaha')}
+            </div>
+          </div>
+          <div class="dashboard-card">
+            <div class="card-header"><h3>Per Jumlah Pekerja</h3></div>
+            <div class="card-body">
+              ${renderChart(data.byPekerja, 'jumlah_pekerja')}
+            </div>
+          </div>
+          <div class="dashboard-card">
             <div class="card-header"><h3>Jenis Bencana</h3></div>
             <div class="card-body">
               ${renderChart(data.byBencana, 'jenis_bencana')}
@@ -318,7 +330,7 @@ const Dashboard = (() => {
       return `
         <div style="margin-bottom:12px;">
           <div class="flex-between mb-1">
-            <span style="font-size:0.85rem;font-weight:600;">${App.escapeHtml(i.name)}</span>
+            <span style="font-size:0.85rem;font-weight:600;">${key === 'skala_usaha' ? App.label('SKALA_USAHA', i.name) : key === 'jumlah_pekerja' ? App.label('JUMLAH_PEKERJA', i.name) : App.escapeHtml(i.name)}</span>
             <span style="font-size:0.85rem;color:var(--gray-600);">${i.count}</span>
           </div>
           <div style="height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden;">
@@ -372,9 +384,22 @@ const Dashboard = (() => {
     container.innerHTML = `
       <div class="data-toolbar">
         <input type="text" class="search-input" id="searchInput" placeholder="Cari nama usaha, alamat, penanggung jawab...">
+        <select class="filter-select" id="filterKel">
+          <option value="">Semua Kelurahan</option>
+          ${(meta.enums.kelurahan || []).map(k => `<option value="${App.escapeHtml(k)}">${App.escapeHtml(k)}</option>`).join('')}
+          <option value="__kosong">— Belum diisi —</option>
+        </select>
         <select class="filter-select" id="filterKategori">
           <option value="">Semua Kategori</option>
           ${meta.enums.kategori.map(k => `<option value="${k}">${k}</option>`).join('')}
+        </select>
+        <select class="filter-select" id="filterSkala">
+          <option value="">Semua Skala</option>
+          ${(meta.enums.skala_usaha || []).map(k => `<option value="${k}">${App.label('SKALA_USAHA', k)}</option>`).join('')}
+        </select>
+        <select class="filter-select" id="filterPekerja">
+          <option value="">Jumlah Pekerja</option>
+          ${(meta.enums.jumlah_pekerja || []).map(k => `<option value="${k}">${App.label('JUMLAH_PEKERJA', k)}</option>`).join('')}
         </select>
         <select class="filter-select" id="filterJenis">
           <option value="">Semua Jenis</option>
@@ -404,7 +429,13 @@ const Dashboard = (() => {
       const params = new URLSearchParams({ page, per: 15 });
       if (search) params.set('search', search);
       if (kategori) params.set('kategori', kategori);
+      const kel = document.getElementById('filterKel').value;
+      if (kel) params.set('kelurahan', kel);
       if (jenis) params.set('jenis', jenis);
+      const skala = document.getElementById('filterSkala').value;
+      const pekerja = document.getElementById('filterPekerja').value;
+      if (skala) params.set('skala', skala);
+      if (pekerja) params.set('pekerja', pekerja);
       if (izin !== '') params.set('izin', izin);
       if (mineOnly) params.set('mine', '1');
 
@@ -419,7 +450,10 @@ const Dashboard = (() => {
     const debouncedLoad = App.debounce(() => { page = 1; loadData(); }, 300);
     document.getElementById('searchInput').addEventListener('input', debouncedLoad);
     document.getElementById('filterKategori').addEventListener('change', () => { page = 1; loadData(); });
+    document.getElementById('filterKel').addEventListener('change', () => { page = 1; loadData(); });
     document.getElementById('filterJenis').addEventListener('change', () => { page = 1; loadData(); });
+    document.getElementById('filterSkala').addEventListener('change', () => { page = 1; loadData(); });
+    document.getElementById('filterPekerja').addEventListener('change', () => { page = 1; loadData(); });
     document.getElementById('filterIzin').addEventListener('change', () => { page = 1; loadData(); });
     const mineBtn = document.getElementById('filterMine');
     if (mineBtn) {
@@ -445,7 +479,7 @@ const Dashboard = (() => {
     
     let html = `<div class="data-table-wrap"><table class="data-table">
       <thead><tr>
-        <th>Kode</th><th>Nama Usaha</th><th>Kategori</th><th>Jenis</th>
+        <th>Kode</th><th>Nama Usaha</th><th>Kelurahan</th><th>Kategori</th><th>Skala</th><th>Pekerja</th><th>Jenis</th>
         <th>Izin</th><th>Keselamatan</th>
         ${customHeaders.map(f => `<th>${App.escapeHtml(f.label)}</th>`).join('')}
         <th>PIC</th><th>Alamat</th><th>Tanggal</th><th>Pendata</th><th>Aksi</th>
@@ -457,7 +491,10 @@ const Dashboard = (() => {
       html += `<tr>
         <td><code>${App.escapeHtml(r.ref)}</code></td>
         <td><a href="#detail/${r.id}"><strong>${App.escapeHtml(r.nama_usaha)}</strong></a></td>
+        <td>${r.kelurahan ? `<span class="tag tag-blue">${App.escapeHtml(r.kelurahan)}</span>` : '<span class="text-muted">-</span>'}</td>
         <td><span class="tag">${App.kategoriIcon(r.kategori_usaha)} ${App.escapeHtml(r.kategori_usaha)}</span></td>
+        <td>${r.skala_usaha ? `<span class="tag">${App.label('SKALA_USAHA', r.skala_usaha)}</span>` : '<span class="text-muted">-</span>'}</td>
+        <td>${App.label('JUMLAH_PEKERJA', r.jumlah_pekerja)}</td>
         <td>${App.escapeHtml(r.jenis_kepemilikan)}</td>
         <td>${r.izin_usaha ? '<span class="tag tag-green">Ada</span>' : '<span class="tag tag-red">Tidak</span>'}</td>
         <td>${renderKeamanan(r.kelengkapan_keamanan)}</td>
@@ -534,10 +571,13 @@ const Dashboard = (() => {
                 <dl>
                   <dt>Kategori</dt><dd>${App.kategoriIcon(b.kategori_usaha)} ${App.escapeHtml(b.kategori_usaha)}</dd>
                   <dt>Jenis Kepemilikan</dt><dd>${App.escapeHtml(b.jenis_kepemilikan)}</dd>
+                  <dt>Skala Usaha</dt><dd>${b.skala_usaha ? `<span class="tag">${App.label('SKALA_USAHA', b.skala_usaha)}</span>` : '<span class="text-muted">Belum diisi</span>'}</dd>
+                  <dt>Jumlah Pekerja</dt><dd>${b.jumlah_pekerja ? App.label('JUMLAH_PEKERJA', b.jumlah_pekerja) : '<span class="text-muted">Belum diisi</span>'}</dd>
                   <dt>Izin Usaha</dt><dd>${b.izin_usaha ? '<span class="tag tag-green">Ada</span>' : '<span class="tag tag-red">Tidak Ada</span>'}</dd>
                   <dt>Kelengkapan Keselamatan</dt><dd>${renderKeamanan(b.kelengkapan_keamanan)}</dd>
                   <dt>Penanggung Jawab</dt><dd>${App.escapeHtml(b.nama_pic)}</dd>
                   <dt>Nomor HP</dt><dd><a href="tel:${b.hp_pic}">${App.escapeHtml(b.hp_pic)}</a></dd>
+                  <dt>Kelurahan</dt><dd>${b.kelurahan ? `<span class="tag tag-blue">${App.escapeHtml(b.kelurahan)}</span>` : '<span class="text-muted">Belum diisi</span>'}</dd>
                   <dt>Alamat</dt><dd>${App.escapeHtml(b.alamat)}</dd>
                   ${b.lat && b.lng ? `<dt>Koordinat</dt><dd>${b.lat.toFixed(6)}, ${b.lng.toFixed(6)}</dd>` : ''}
                   <dt>Pendata</dt><dd>${App.escapeHtml(b.owner_nama || '-')} (${App.escapeHtml(b.owner_username || '')})</dd>
@@ -619,10 +659,8 @@ const Dashboard = (() => {
   }
 
   async function renderMapPage(container) {
-    container.innerHTML = `
-      <div class="map-full" id="dashboardMap"></div>
-    `;
-    MapModule.initDashboardMap('dashboardMap');
+    container.innerHTML = '<div class="loading">Memuat peta...</div>';
+    await MapModule.mount(container);
   }
 
   return { init, navigateTo, deleteBusiness };

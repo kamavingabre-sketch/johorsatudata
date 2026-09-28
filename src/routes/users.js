@@ -1,6 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { db, logAction } = require('../db');
+const { db, ENUMS, normEnum, normKelurahan, logAction } = require('../db');
 const { requireAuth, requireSuper, clientIp } = require('../util');
 
 const router = express.Router();
@@ -9,9 +9,9 @@ router.use(requireAuth, requireSuper);
 router.get('/', (req, res) => {
   const rows = db
     .prepare(
-      `SELECT u.id, u.username, u.nama, u.role, u.is_active, u.must_reset, u.created_at,
+      `SELECT u.id, u.username, u.nama, u.role, u.is_active, u.must_reset, u.created_at, u.kelurahan, u.jabatan, u.hp, u.approval,
               (SELECT COUNT(*) FROM businesses b WHERE b.owner_id = u.id) AS jumlah_data
-       FROM users u ORDER BY CASE u.role WHEN 'superadmin' THEN 0 ELSE 1 END, u.created_at`
+       FROM users u ORDER BY CASE u.approval WHEN 'pending' THEN 0 ELSE 1 END, CASE u.role WHEN 'superadmin' THEN 0 ELSE 1 END, u.created_at`
     )
     .all();
   res.json({ users: rows });
@@ -30,9 +30,14 @@ router.post('/', (req, res) => {
   if (db.prepare('SELECT id FROM users WHERE lower(username)=?').get(uname))
     return res.status(409).json({ error: 'Username sudah dipakai.' });
 
+  const kel = req.body.kelurahan ? normKelurahan(req.body.kelurahan) : null;
+  const jab = req.body.jabatan ? normEnum(ENUMS.JABATAN, req.body.jabatan) : null;
+  if (req.body.kelurahan && !kel) return res.status(400).json({ error: 'Kelurahan tidak valid.' });
+  if (req.body.jabatan && !jab) return res.status(400).json({ error: 'Jabatan tidak valid.' });
+
   const info = db
-    .prepare('INSERT INTO users (username, nama, role, password_hash, must_reset) VALUES (?,?,?,?,1)')
-    .run(uname, String(nama).trim(), finalRole, bcrypt.hashSync(String(password), 10));
+    .prepare('INSERT INTO users (username, nama, role, password_hash, must_reset, kelurahan, jabatan) VALUES (?,?,?,?,1,?,?)')
+    .run(uname, String(nama).trim(), finalRole, bcrypt.hashSync(String(password), 10), kel, jab);
   logAction({
     userId: req.user.sub,
     username: req.user.username,
@@ -51,8 +56,35 @@ router.put('/:id', (req, res) => {
   const id = parseInt(req.params.id, 10);
   const user = db.prepare('SELECT * FROM users WHERE id=?').get(id);
   if (!user) return res.status(404).json({ error: 'Akun tidak ditemukan.' });
-  const { nama, role, is_active, password } = req.body || {};
+  const { nama, role, is_active, password, approval } = req.body || {};
   const changes = [];
+
+  if (req.body && req.body.kelurahan !== undefined) {
+    const kel = req.body.kelurahan ? normKelurahan(req.body.kelurahan) : null;
+    if (req.body.kelurahan && !kel) return res.status(400).json({ error: 'Kelurahan tidak valid.' });
+    if ((kel || null) !== (user.kelurahan || null)) {
+      db.prepare('UPDATE users SET kelurahan=? WHERE id=?').run(kel, id);
+      changes.push('kelurahan');
+    }
+  }
+  if (req.body && req.body.jabatan !== undefined) {
+    const jab = req.body.jabatan ? normEnum(ENUMS.JABATAN, req.body.jabatan) : null;
+    if (req.body.jabatan && !jab) return res.status(400).json({ error: 'Jabatan tidak valid.' });
+    if ((jab || null) !== (user.jabatan || null)) {
+      db.prepare('UPDATE users SET jabatan=? WHERE id=?').run(jab, id);
+      changes.push('jabatan');
+    }
+  }
+  if (approval !== undefined) {
+    if (!['approved', 'rejected', 'pending'].includes(approval))
+      return res.status(400).json({ error: 'Status persetujuan tidak valid.' });
+    if (id === req.user.sub && approval !== 'approved')
+      return res.status(400).json({ error: 'Tidak dapat mengubah persetujuan akun sendiri.' });
+    if (approval !== user.approval) {
+      db.prepare('UPDATE users SET approval=? WHERE id=?').run(approval, id);
+      changes.push('persetujuan: ' + approval);
+    }
+  }
 
   if (nama && String(nama).trim() !== user.nama) {
     db.prepare('UPDATE users SET nama=? WHERE id=?').run(String(nama).trim(), id);

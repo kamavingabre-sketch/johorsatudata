@@ -23,7 +23,32 @@ const ENUMS = {
   FIELD_TYPES: ['text', 'number', 'date', 'select', 'yesno', 'phone', 'photo'],
   JENIS_BENCANA: ['BANJIR', 'ANGIN PUTING BELIUNG'],
   AGAMA: ['ISLAM', 'KRISTEN PROTESTAN', 'KATOLIK', 'HINDU', 'BUDDHA', 'KONGHUCU'],
+  KELURAHAN: ['Suka Maju', 'Titi Kuning', 'Kedai Durian', 'Pangkalan Masyhur', 'Gedung Johor', 'Kwala Bekala'],
+  JABATAN: ['ASN', 'LURAH', 'KEPLING'],
+  SKALA_USAHA: ['USAHA MIKRO', 'USAHA KECIL', 'USAHA SEDANG', 'USAHA BESAR'],
+  JUMLAH_PEKERJA: ['DIBAWAH 10', 'DIBAWAH 30', 'DIBAWAH 50', 'DIBAWAH 100', 'DIBAWAH 300', 'DIBAWAH 500', 'DIATAS 500'],
 };
+
+// Label tampilan (Title Case) untuk nilai enum tersimpan (UPPERCASE)
+const LABELS = {
+  SKALA_USAHA: { 'USAHA MIKRO': 'Usaha Mikro', 'USAHA KECIL': 'Usaha Kecil', 'USAHA SEDANG': 'Usaha Sedang', 'USAHA BESAR': 'Usaha Besar' },
+  JUMLAH_PEKERJA: {
+    'DIBAWAH 10': 'Dibawah 10', 'DIBAWAH 30': 'Dibawah 30', 'DIBAWAH 50': 'Dibawah 50', 'DIBAWAH 100': 'Dibawah 100',
+    'DIBAWAH 300': 'Dibawah 300', 'DIBAWAH 500': 'Dibawah 500', 'DIATAS 500': 'Diatas 500',
+  },
+};
+
+// Normalisasi generik: cocokkan tanpa peduli huruf besar/kecil & spasi ganda ke daftar enum; null jika tidak valid
+function normEnum(list, v) {
+  const t = String(v || '').trim().replace(/\s+/g, ' ').toUpperCase();
+  return list.find((x) => x.toUpperCase() === t) || null;
+}
+
+// Cocokkan input (tanpa peduli huruf besar/kecil) ke nama kelurahan resmi; null jika tidak valid
+function normKelurahan(v) {
+  const t = String(v || '').trim().toLowerCase();
+  return ENUMS.KELURAHAN.find((k) => k.toLowerCase() === t) || null;
+}
 
 // Wrapper untuk sql.js yang kompatibel dengan API better-sqlite3
 class Database {
@@ -241,12 +266,42 @@ async function init() {
   // Migrations for existing databases
   try { db.exec("ALTER TABLE worship_places ADD COLUMN agama TEXT NOT NULL DEFAULT ''"); } catch {}
 
+  // Migrasi: kelurahan + titik kumpul (koordinat & foto)
+  for (const sql of [
+    'ALTER TABLE businesses ADD COLUMN kelurahan TEXT',
+    'ALTER TABLE disasters ADD COLUMN kelurahan TEXT',
+    'ALTER TABLE worship_places ADD COLUMN kelurahan TEXT',
+    'ALTER TABLE disasters ADD COLUMN titik_kumpul_lat REAL',
+    'ALTER TABLE disasters ADD COLUMN titik_kumpul_lng REAL',
+    'ALTER TABLE disasters ADD COLUMN titik_kumpul_foto TEXT',
+    // Pendaftaran akun: kelurahan tugas & jabatan pengguna
+    'ALTER TABLE users ADD COLUMN kelurahan TEXT',
+    'ALTER TABLE users ADD COLUMN jabatan TEXT',
+    "ALTER TABLE users ADD COLUMN approval TEXT NOT NULL DEFAULT 'approved'",
+    'ALTER TABLE users ADD COLUMN hp TEXT',
+    // Skala usaha & jumlah pekerja pada data usaha
+    'ALTER TABLE businesses ADD COLUMN skala_usaha TEXT',
+    'ALTER TABLE businesses ADD COLUMN jumlah_pekerja TEXT',
+  ]) {
+    try { db.exec(sql); } catch {}
+  }
+  // Kolom kustom lama "Kelurahan / Perumahan" dipertahankan tetapi diganti nama agar tidak rancu
+  try {
+    db.prepare("UPDATE fields SET label='Perumahan / Komplek' WHERE is_system=0 AND label='Kelurahan / Perumahan'").run();
+  } catch {}
+
   // Indexes
   db.exec(`CREATE INDEX IF NOT EXISTS idx_biz_owner ON businesses(owner_id)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_biz_kategori ON businesses(kategori_usaha)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_logs_created ON activity_logs(created_at)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_disasters_owner ON disasters(owner_id)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_worship_owner ON worship_places(owner_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_biz_kel ON businesses(kelurahan)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_dis_kel ON disasters(kelurahan)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_wor_kel ON worship_places(kelurahan)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_biz_skala ON businesses(skala_usaha)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_biz_pekerja ON businesses(jumlah_pekerja)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_users_kel ON users(kelurahan)`);
 
   seed();
   db.saveNow();
@@ -268,6 +323,8 @@ function seed() {
       ['Nama Usaha', 'text', [], 1, 'nama_usaha'],
       ['Jenis Kepemilikan Usaha', 'select', ENUMS.JENIS, 1, 'jenis_kepemilikan'],
       ['Kategori Usaha', 'select', ENUMS.KATEGORI, 1, 'kategori_usaha'],
+      ['Skala Usaha', 'select', ENUMS.SKALA_USAHA, 1, 'skala_usaha'],
+      ['Jumlah Pekerja', 'select', ENUMS.JUMLAH_PEKERJA, 1, 'jumlah_pekerja'],
       ['Izin Usaha', 'yesno', [], 1, 'izin_usaha'],
       ['Nama Penanggung Jawab', 'text', [], 1, 'nama_pic'],
       ['Nomor HP Penanggung Jawab', 'phone', [], 1, 'hp_pic'],
@@ -283,6 +340,20 @@ function seed() {
     db.prepare(
       'INSERT INTO fields (label, type, options, required, is_system, sort) VALUES (?,?,?,0,0,?)'
     ).run('Kelurahan / Perumahan', 'text', '[]', 10);
+  }
+
+  // Migrasi untuk database lama: pastikan field sistem baru ada (idempotent)
+  const ensureSys = [
+    ['Skala Usaha', 'select', ENUMS.SKALA_USAHA, 'skala_usaha', 3.1],
+    ['Jumlah Pekerja', 'select', ENUMS.JUMLAH_PEKERJA, 'jumlah_pekerja', 3.2],
+  ];
+  for (const [label, type, opts, key, sort] of ensureSys) {
+    const exists = db.prepare('SELECT id FROM fields WHERE system_key = ?').get(key);
+    if (!exists) {
+      db.prepare(
+        'INSERT INTO fields (label, type, options, required, is_system, system_key, sort) VALUES (?,?,?,1,1,?,?)'
+      ).run(label, type, JSON.stringify(opts), key, sort);
+    }
   }
 }
 
@@ -325,4 +396,4 @@ const dbProxy = new Proxy(
   }
 );
 
-module.exports = { db: dbProxy, init, getDb, ENUMS, logAction, genRefCode };
+module.exports = { db: dbProxy, init, getDb, ENUMS, LABELS, normEnum, normKelurahan, logAction, genRefCode };

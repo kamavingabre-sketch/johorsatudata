@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const { db, ENUMS, logAction, genRefCode } = require('../db');
+const { db, ENUMS, logAction, genRefCode, normKelurahan, normEnum } = require('../db');
 const { UPLOADS_DIR } = require('../config');
 const { requireAuth, requireSuper, clientIp, cleanPhone, toBool } = require('../util');
 
@@ -103,6 +103,8 @@ function shapeRow(row, withOwner = true) {
     nama_usaha: row.nama_usaha,
     jenis_kepemilikan: row.jenis_kepemilikan,
     kategori_usaha: row.kategori_usaha,
+    skala_usaha: row.skala_usaha || null,
+    jumlah_pekerja: row.jumlah_pekerja || null,
     izin_usaha: !!row.izin_usaha,
     izin_foto: row.izin_foto || null,
     nama_pic: row.nama_pic,
@@ -110,6 +112,7 @@ function shapeRow(row, withOwner = true) {
     kelengkapan_keamanan: row.kelengkapan_keamanan,
     foto_usaha: row.foto_usaha || null,
     alamat: row.alamat,
+    kelurahan: row.kelurahan || null,
     lat: row.lat,
     lng: row.lng,
     extra,
@@ -145,6 +148,14 @@ router.get('/', requireAuth, (req, res) => {
     where.push('b.jenis_kepemilikan = @jenis');
     params.jenis = req.query.jenis;
   }
+  if (req.query.skala) {
+    where.push('b.skala_usaha = @skala');
+    params.skala = req.query.skala;
+  }
+  if (req.query.pekerja) {
+    where.push('b.jumlah_pekerja = @pekerja');
+    params.pekerja = req.query.pekerja;
+  }
   if (req.query.keamanan) {
     where.push('b.kelengkapan_keamanan = @keamanan');
     params.keamanan = req.query.keamanan;
@@ -152,6 +163,10 @@ router.get('/', requireAuth, (req, res) => {
   if (req.query.izin === '1' || req.query.izin === '0') {
     where.push('b.izin_usaha = @izin');
     params.izin = req.query.izin === '1' ? 1 : 0;
+  }
+  if (req.query.kelurahan) {
+    if (req.query.kelurahan === '__kosong') where.push("(b.kelurahan IS NULL OR b.kelurahan = '')");
+    else { where.push('b.kelurahan = @kel'); params.kel = req.query.kelurahan; }
   }
   if (req.query.mine === '1') {
     where.push('b.owner_id = @me');
@@ -191,6 +206,12 @@ function validateAndNormalize(body, filesExist) {
   data.kategori_usaha = String(body.kategori_usaha || '').toUpperCase().trim();
   if (!ENUMS.KATEGORI.includes(data.kategori_usaha)) errors.push('Kategori usaha tidak valid.');
 
+  data.skala_usaha = normEnum(ENUMS.SKALA_USAHA, body.skala_usaha);
+  if (!data.skala_usaha) errors.push('Skala usaha wajib dipilih (Usaha Mikro, Kecil, Sedang, atau Besar).');
+
+  data.jumlah_pekerja = normEnum(ENUMS.JUMLAH_PEKERJA, body.jumlah_pekerja);
+  if (!data.jumlah_pekerja) errors.push('Jumlah pekerja wajib dipilih.');
+
   data.izin_usaha = body.izin_usaha === undefined ? null : toBool(body.izin_usaha) ? 1 : 0;
   if (data.izin_usaha === null) errors.push('Status izin usaha wajib diisi.');
 
@@ -203,6 +224,9 @@ function validateAndNormalize(body, filesExist) {
   data.kelengkapan_keamanan = String(body.kelengkapan_keamanan || '').toUpperCase().trim();
   if (!ENUMS.KEAMANAN.includes(data.kelengkapan_keamanan))
     errors.push('Kelengkapan keselamatan tidak valid.');
+
+  data.kelurahan = normKelurahan(body.kelurahan);
+  if (!data.kelurahan) errors.push('Kelurahan wajib dipilih (' + ENUMS.KELURAHAN.join(', ') + ').');
 
   data.alamat = String(body.alamat || '').trim();
   if (data.alamat.length < 5) errors.push('Alamat / lokasi usaha minimal 5 karakter.');
@@ -308,8 +332,9 @@ router.post('/', requireAuth, uploadPhotos, (req, res) => {
   const info = db
     .prepare(
       `INSERT INTO businesses (ref_code, owner_id, nama_usaha, jenis_kepemilikan, kategori_usaha,
-        izin_usaha, izin_foto, nama_pic, hp_pic, kelengkapan_keamanan, foto_usaha, alamat, lat, lng, extra)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+        skala_usaha, jumlah_pekerja,
+        izin_usaha, izin_foto, nama_pic, hp_pic, kelengkapan_keamanan, foto_usaha, alamat, kelurahan, lat, lng, extra)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     )
     .run(
       ref,
@@ -317,6 +342,8 @@ router.post('/', requireAuth, uploadPhotos, (req, res) => {
       data.nama_usaha,
       data.jenis_kepemilikan,
       data.kategori_usaha,
+      data.skala_usaha,
+      data.jumlah_pekerja,
       data.izin_usaha,
       data.izin_usaha === 1 ? izinFoto : null,
       data.nama_pic,
@@ -324,6 +351,7 @@ router.post('/', requireAuth, uploadPhotos, (req, res) => {
       data.kelengkapan_keamanan,
       foto,
       data.alamat,
+      data.kelurahan,
       data.lat,
       data.lng,
       JSON.stringify(cust.extra)
@@ -390,13 +418,15 @@ router.put('/:id', requireAuth, uploadPhotos, (req, res) => {
   }
 
   db.prepare(
-    `UPDATE businesses SET nama_usaha=?, jenis_kepemilikan=?, kategori_usaha=?, izin_usaha=?, izin_foto=?,
-      nama_pic=?, hp_pic=?, kelengkapan_keamanan=?, foto_usaha=?, alamat=?, lat=?, lng=?, extra=?,
+    `UPDATE businesses SET nama_usaha=?, jenis_kepemilikan=?, kategori_usaha=?, skala_usaha=?, jumlah_pekerja=?, izin_usaha=?, izin_foto=?,
+      nama_pic=?, hp_pic=?, kelengkapan_keamanan=?, foto_usaha=?, alamat=?, kelurahan=?, lat=?, lng=?, extra=?,
       updated_at=datetime('now') WHERE id=?`
   ).run(
     data.nama_usaha,
     data.jenis_kepemilikan,
     data.kategori_usaha,
+    data.skala_usaha,
+    data.jumlah_pekerja,
     data.izin_usaha,
     data.izin_usaha === 1 ? izinFoto : null,
     data.nama_pic,
@@ -404,6 +434,7 @@ router.put('/:id', requireAuth, uploadPhotos, (req, res) => {
     data.kelengkapan_keamanan,
     foto,
     data.alamat,
+    data.kelurahan,
     data.lat,
     data.lng,
     JSON.stringify(cust.extra),
@@ -415,9 +446,12 @@ router.put('/:id', requireAuth, uploadPhotos, (req, res) => {
   if (old.nama_usaha !== data.nama_usaha) diffs.push('nama usaha');
   if (old.kategori_usaha !== data.kategori_usaha) diffs.push('kategori');
   if (old.jenis_kepemilikan !== data.jenis_kepemilikan) diffs.push('jenis kepemilikan');
+  if ((old.skala_usaha || '') !== data.skala_usaha) diffs.push('skala usaha');
+  if ((old.jumlah_pekerja || '') !== data.jumlah_pekerja) diffs.push('jumlah pekerja');
   if (old.izin_usaha !== data.izin_usaha) diffs.push('izin usaha');
   if (old.kelengkapan_keamanan !== data.kelengkapan_keamanan) diffs.push('kelengkapan keselamatan');
   if (old.nama_pic !== data.nama_pic || old.hp_pic !== data.hp_pic) diffs.push('penanggung jawab');
+  if ((old.kelurahan || '') !== data.kelurahan) diffs.push('kelurahan');
   if (old.alamat !== data.alamat || old.lat !== data.lat || old.lng !== data.lng) diffs.push('lokasi');
   if (JSON.stringify(JSON.parse(old.extra || '{}')) !== JSON.stringify(cust.extra)) diffs.push('kolom tambahan');
 

@@ -28,6 +28,12 @@ router.get('/stats', requireAuth, (req, res) => {
   const byJenis = db
     .prepare('SELECT jenis_kepemilikan name, COUNT(*) count FROM businesses GROUP BY jenis_kepemilikan ORDER BY count DESC')
     .all();
+  const bySkala = db
+    .prepare("SELECT COALESCE(skala_usaha,'BELUM DIISI') name, COUNT(*) count FROM businesses GROUP BY skala_usaha ORDER BY count DESC")
+    .all();
+  const byPekerja = db
+    .prepare("SELECT COALESCE(jumlah_pekerja,'BELUM DIISI') name, COUNT(*) count FROM businesses GROUP BY jumlah_pekerja ORDER BY count DESC")
+    .all();
   const byKeamanan = db
     .prepare('SELECT kelengkapan_keamanan name, COUNT(*) count FROM businesses GROUP BY kelengkapan_keamanan')
     .all();
@@ -47,7 +53,7 @@ router.get('/stats', requireAuth, (req, res) => {
     : db
         .prepare("SELECT * FROM activity_logs WHERE user_id = ? AND (action LIKE 'pendataan.%' OR action LIKE 'bencana.%' OR action LIKE 'ibadah.%') ORDER BY id DESC LIMIT 8")
         .all(req.user.sub);
-  res.json({ totals, disasterTotals, worshipTotals, mine: mine.c, byKategori, byJenis, byKeamanan, byBencana, byIbadah, pendata, recent, recentLogs });
+  res.json({ totals, disasterTotals, worshipTotals, mine: mine.c, byKategori, byJenis, bySkala, byPekerja, byKeamanan, byBencana, byIbadah, pendata, recent, recentLogs });
 });
 
 function shape(row) {
@@ -61,6 +67,8 @@ function shape(row) {
     nama_usaha: row.nama_usaha,
     jenis_kepemilikan: row.jenis_kepemilikan,
     kategori_usaha: row.kategori_usaha,
+    skala_usaha: row.skala_usaha || null,
+    jumlah_pekerja: row.jumlah_pekerja || null,
     izin_usaha: !!row.izin_usaha,
     izin_foto: row.izin_foto || null,
     nama_pic: row.nama_pic,
@@ -68,6 +76,7 @@ function shape(row) {
     kelengkapan_keamanan: row.kelengkapan_keamanan,
     foto_usaha: row.foto_usaha || null,
     alamat: row.alamat,
+    kelurahan: row.kelurahan || null,
     lat: row.lat,
     lng: row.lng,
     extra,

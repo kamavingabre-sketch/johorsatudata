@@ -71,6 +71,13 @@ const App = (() => {
     return String(name || '').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
   }
 
+  // Ubah nilai enum tersimpan (UPPERCASE) menjadi label tampilan, mis. 'USAHA MIKRO' -> 'Usaha Mikro'
+  function label(group, value) {
+    if (!value) return '-';
+    const l = meta && meta.labels && meta.labels[group] && meta.labels[group][value];
+    return escapeHtml(l || value);
+  }
+
   function kategoriIcon(kat) {
     const map = {
       'PERDAGANGAN': '🛒',
@@ -86,7 +93,7 @@ const App = (() => {
     return map[kat] || '🏪';
   }
 
-  return { fetchMeta, fetchFields, api, formatDate, formatDateTime, escapeHtml, debounce, initials, kategoriIcon, getMeta: () => meta, getFields: () => customFields };
+  return { fetchMeta, fetchFields, label, api, formatDate, formatDateTime, escapeHtml, debounce, initials, kategoriIcon, getMeta: () => meta, getFields: () => customFields };
 })();
 
 /* ========================================

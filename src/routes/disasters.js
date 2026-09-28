@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const { db, ENUMS, logAction } = require('../db');
+const { db, ENUMS, logAction, normKelurahan } = require('../db');
 const { UPLOADS_DIR } = require('../config');
 const { requireAuth, requireSuper, clientIp } = require('../util');
 
@@ -38,7 +38,7 @@ function uploadPhotos(req, res, next) {
       if (ALLOWED_MIME[file.mimetype]) return cb(null, true);
       cb(new Error('Format foto harus JPG, PNG, atau WEBP (maks 8 MB).'));
     },
-  }).fields([{ name: 'foto', maxCount: 1 }]);
+  }).fields([{ name: 'foto', maxCount: 1 }, { name: 'foto_titik_kumpul', maxCount: 1 }]);
   mw(req, res, (err) => {
     if (err) {
       cleanupFiles(req);
@@ -85,7 +85,11 @@ function shapeRow(row) {
     jumlah_kk: row.jumlah_kk,
     deskripsi: row.deskripsi,
     foto: row.foto || null,
+    kelurahan: row.kelurahan || null,
     titik_kumpul: row.titik_kumpul,
+    titik_kumpul_lat: row.titik_kumpul_lat,
+    titik_kumpul_lng: row.titik_kumpul_lng,
+    titik_kumpul_foto: row.titik_kumpul_foto || null,
     lat: row.lat,
     lng: row.lng,
     created_at: row.created_at,
@@ -106,12 +110,16 @@ router.get('/', requireAuth, (req, res) => {
   const where = [];
   const params = {};
   if (req.query.search) {
-    where.push('(d.nama_lokasi LIKE @q OR d.alamat LIKE @q OR d.penyebab LIKE @q OR d.ref_code LIKE @q)');
+    where.push('(d.nama_lokasi LIKE @q OR d.alamat LIKE @q OR d.penyebab LIKE @q OR d.titik_kumpul LIKE @q OR d.ref_code LIKE @q)');
     params.q = `%${String(req.query.search).trim()}%`;
   }
   if (req.query.jenis) {
     where.push('d.jenis_bencana = @jenis');
     params.jenis = req.query.jenis;
+  }
+  if (req.query.kelurahan) {
+    if (req.query.kelurahan === '__kosong') where.push("(d.kelurahan IS NULL OR d.kelurahan = '')");
+    else { where.push('d.kelurahan = @kel'); params.kel = req.query.kelurahan; }
   }
   const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
   const total = db.prepare(`SELECT COUNT(*) c FROM disasters d ${whereSql}`).get(params).c;
@@ -127,7 +135,7 @@ router.get('/all', requireAuth, (req, res) => {
 });
 
 router.get('/map/all', requireAuth, (req, res) => {
-  const rows = db.prepare(`${SELECT_BASE} WHERE d.lat IS NOT NULL AND d.lng IS NOT NULL ORDER BY d.id DESC`).all();
+  const rows = db.prepare(`${SELECT_BASE} WHERE (d.lat IS NOT NULL AND d.lng IS NOT NULL) OR (d.titik_kumpul_lat IS NOT NULL AND d.titik_kumpul_lng IS NOT NULL) ORDER BY d.id DESC`).all();
   res.json({ count: rows.length, places: rows.map(shapeRow) });
 });
 
@@ -139,29 +147,51 @@ router.get('/:id', requireAuth, (req, res) => {
 
 /* ---------------- create / update / delete ---------------- */
 
-router.post('/', requireAuth, uploadPhotos, (req, res) => {
-  const errors = [];
+function num(v, min, max) {
+  const n = parseFloat(v);
+  return Number.isFinite(n) && n >= min && n <= max ? n : null;
+}
+
+// Validasi bersama untuk POST & PUT. `existing` = baris lama (untuk PUT) agar foto lama dihitung.
+function validate(req, existing) {
   const body = req.body || {};
-  
-  const nama_lokasi = String(body.nama_lokasi || '').trim();
-  if (nama_lokasi.length < 2) errors.push('Nama/lokasi titik wajib diisi.');
-  
-  const alamat = String(body.alamat || '').trim();
-  if (alamat.length < 5) errors.push('Alamat lengkap minimal 5 karakter.');
-  
-  const jenis_bencana = String(body.jenis_bencana || '').trim();
-  if (jenis_bencana.length < 3) errors.push('Jenis bencana wajib diisi (isi singkat).');
-  
-  const penyebab = String(body.penyebab || '').trim();
-  if (penyebab.length < 3) errors.push('Penyebab bencana wajib diisi.');
+  const errors = [];
+  const str = (k) => String(body[k] || '').trim();
 
-  const lat = parseFloat(body.lat);
-  const lng = parseFloat(body.lng);
-  const finalLat = Number.isFinite(lat) && lat >= -90 && lat <= 90 ? lat : null;
-  const finalLng = Number.isFinite(lng) && lng >= -180 && lng <= 180 ? lng : null;
+  const d = {
+    nama_lokasi: str('nama_lokasi'),
+    alamat: str('alamat'),
+    jenis_bencana: str('jenis_bencana'),
+    penyebab: str('penyebab'),
+    jumlah_rumah: str('jumlah_rumah') || null,
+    jumlah_kk: str('jumlah_kk') || null,
+    deskripsi: str('deskripsi') || null,
+    titik_kumpul: str('titik_kumpul'),
+    lat: num(body.lat, -90, 90),
+    lng: num(body.lng, -180, 180),
+    tk_lat: num(body.tk_lat, -90, 90),
+    tk_lng: num(body.tk_lng, -180, 180),
+  };
+  d.kelurahan = normKelurahan(body.kelurahan);
 
-  const foto = uploadedPath(req, 'foto');
+  if (d.nama_lokasi.length < 2) errors.push('Nama/lokasi titik wajib diisi.');
+  if (!d.kelurahan) errors.push('Kelurahan wajib dipilih (' + ENUMS.KELURAHAN.join(', ') + ').');
+  if (d.alamat.length < 5) errors.push('Alamat lengkap minimal 5 karakter.');
+  if (d.jenis_bencana.length < 3) errors.push('Jenis bencana wajib diisi (isi singkat).');
+  if (d.penyebab.length < 3) errors.push('Penyebab bencana wajib diisi.');
+  if (d.titik_kumpul.length < 5) errors.push('Alamat titik kumpul wajib diisi (minimal 5 karakter).');
+  if (d.tk_lat === null || d.tk_lng === null)
+    errors.push('Koordinat titik kumpul wajib diisi (gunakan GPS, klik peta, atau isi manual).');
+  if ((d.lat === null) !== (d.lng === null)) errors.push('Koordinat lokasi bencana harus lengkap (latitude dan longitude).');
 
+  d.foto = uploadedPath(req, 'foto') || (existing ? existing.foto : null);
+  d.tk_foto = uploadedPath(req, 'foto_titik_kumpul') || (existing ? existing.titik_kumpul_foto : null);
+  if (!d.tk_foto) errors.push('Foto titik kumpul wajib diunggah.');
+  return { d, errors };
+}
+
+router.post('/', requireAuth, uploadPhotos, (req, res) => {
+  const { d, errors } = validate(req, null);
   if (errors.length) {
     cleanupFiles(req);
     return res.status(400).json({ error: errors.join(' ') });
@@ -170,24 +200,21 @@ router.post('/', requireAuth, uploadPhotos, (req, res) => {
   const seq = db.prepare('SELECT COALESCE(MAX(id),0)+1 n FROM disasters').get().n;
   const ref = genRefCode(seq);
   const info = db.prepare(
-    `INSERT INTO disasters (ref_code, owner_id, nama_lokasi, alamat, jenis_bencana, penyebab,
-      jumlah_rumah, jumlah_kk, deskripsi, foto, titik_kumpul, lat, lng)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO disasters (ref_code, owner_id, nama_lokasi, kelurahan, alamat, jenis_bencana, penyebab,
+      jumlah_rumah, jumlah_kk, deskripsi, foto, titik_kumpul, titik_kumpul_lat, titik_kumpul_lng,
+      titik_kumpul_foto, lat, lng)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).run(
-    ref, req.user.sub, nama_lokasi, alamat, jenis_bencana, penyebab,
-    String(body.jumlah_rumah || '').trim() || null,
-    String(body.jumlah_kk || '').trim() || null,
-    String(body.deskripsi || '').trim() || null,
-    foto,
-    String(body.titik_kumpul || '').trim() || null,
-    finalLat, finalLng
+    ref, req.user.sub, d.nama_lokasi, d.kelurahan, d.alamat, d.jenis_bencana, d.penyebab,
+    d.jumlah_rumah, d.jumlah_kk, d.deskripsi, d.foto, d.titik_kumpul, d.tk_lat, d.tk_lng,
+    d.tk_foto, d.lat, d.lng
   );
 
   logAction({
     userId: req.user.sub, username: req.user.username, nama: req.user.nama,
     action: 'bencana.baru', targetType: 'disaster', targetId: info.lastInsertRowid,
-    targetName: `${ref} — ${nama_lokasi}`,
-    detail: `Data titik rawan bencana baru [${jenis_bencana}]`,
+    targetName: `${ref} — ${d.nama_lokasi}`,
+    detail: `Data titik rawan bencana baru [${d.jenis_bencana}] — Kel. ${d.kelurahan}`,
     ip: clientIp(req),
   });
 
@@ -203,50 +230,27 @@ router.put('/:id', requireAuth, uploadPhotos, (req, res) => {
     return res.status(403).json({ error: 'Anda hanya dapat menyunting data yang Anda buat sendiri.' });
   }
 
-  const errors = [];
-  const body = req.body || {};
-  
-  const nama_lokasi = String(body.nama_lokasi || '').trim();
-  if (nama_lokasi.length < 2) errors.push('Nama/lokasi titik wajib diisi.');
-  
-  const alamat = String(body.alamat || '').trim();
-  if (alamat.length < 5) errors.push('Alamat lengkap minimal 5 karakter.');
-  
-  const jenis_bencana = String(body.jenis_bencana || '').trim();
-  if (jenis_bencana.length < 3) errors.push('Jenis bencana wajib diisi (isi singkat).');
-  
-  const penyebab = String(body.penyebab || '').trim();
-  if (penyebab.length < 3) errors.push('Penyebab bencana wajib diisi.');
-
-  const lat = parseFloat(body.lat);
-  const lng = parseFloat(body.lng);
-  const finalLat = Number.isFinite(lat) && lat >= -90 && lat <= 90 ? lat : null;
-  const finalLng = Number.isFinite(lng) && lng >= -180 && lng <= 180 ? lng : null;
-
-  let foto = row.foto;
-  const newFoto = uploadedPath(req, 'foto');
-  if (newFoto) { removeStoredPhoto(foto); foto = newFoto; }
-
+  const { d, errors } = validate(req, row);
   if (errors.length) { cleanupFiles(req); return res.status(400).json({ error: errors.join(' ') }); }
 
+  // Hapus file lama hanya bila diganti
+  if (d.foto !== row.foto) removeStoredPhoto(row.foto);
+  if (d.tk_foto !== row.titik_kumpul_foto) removeStoredPhoto(row.titik_kumpul_foto);
+
   db.prepare(
-    `UPDATE disasters SET nama_lokasi=?, alamat=?, jenis_bencana=?, penyebab=?,
-      jumlah_rumah=?, jumlah_kk=?, deskripsi=?, foto=?, titik_kumpul=?, lat=?, lng=?,
-      updated_at=datetime('now') WHERE id=?`
+    `UPDATE disasters SET nama_lokasi=?, kelurahan=?, alamat=?, jenis_bencana=?, penyebab=?,
+      jumlah_rumah=?, jumlah_kk=?, deskripsi=?, foto=?, titik_kumpul=?, titik_kumpul_lat=?,
+      titik_kumpul_lng=?, titik_kumpul_foto=?, lat=?, lng=?, updated_at=datetime('now') WHERE id=?`
   ).run(
-    nama_lokasi, alamat, jenis_bencana, penyebab,
-    String(body.jumlah_rumah || '').trim() || null,
-    String(body.jumlah_kk || '').trim() || null,
-    String(body.deskripsi || '').trim() || null,
-    foto,
-    String(body.titik_kumpul || '').trim() || null,
-    finalLat, finalLng, row.id
+    d.nama_lokasi, d.kelurahan, d.alamat, d.jenis_bencana, d.penyebab,
+    d.jumlah_rumah, d.jumlah_kk, d.deskripsi, d.foto, d.titik_kumpul, d.tk_lat,
+    d.tk_lng, d.tk_foto, d.lat, d.lng, row.id
   );
 
   logAction({
     userId: req.user.sub, username: req.user.username, nama: req.user.nama,
     action: 'bencana.ubah', targetType: 'disaster', targetId: row.id,
-    targetName: `${row.ref_code} — ${nama_lokasi}`,
+    targetName: `${row.ref_code} — ${d.nama_lokasi}`,
     detail: 'Menyunting data titik rawan bencana',
     ip: clientIp(req),
   });
@@ -262,6 +266,7 @@ router.delete('/:id', requireAuth, (req, res) => {
     return res.status(403).json({ error: 'Anda hanya dapat menghapus data yang Anda buat sendiri.' });
 
   removeStoredPhoto(row.foto);
+  removeStoredPhoto(row.titik_kumpul_foto);
   db.prepare('DELETE FROM disasters WHERE id = ?').run(row.id);
   logAction({
     userId: req.user.sub, username: req.user.username, nama: req.user.nama,

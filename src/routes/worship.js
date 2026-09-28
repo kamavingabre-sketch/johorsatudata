@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const { db, ENUMS, logAction } = require('../db');
+const { db, ENUMS, logAction, normKelurahan } = require('../db');
 const { UPLOADS_DIR } = require('../config');
 const { requireAuth, clientIp } = require('../util');
 
@@ -73,6 +73,7 @@ function shapeRow(row) {
     id: row.id, ref: row.ref_code,
     nama: row.nama, jenis: row.jenis, agama: row.agama || '',
     alamat: row.alamat,
+    kelurahan: row.kelurahan || null,
     nama_pengelola: row.nama_pengelola, hp_pengelola: row.hp_pengelola,
     foto: row.foto || null, lat: row.lat, lng: row.lng,
     created_at: row.created_at, updated_at: row.updated_at,
@@ -95,6 +96,10 @@ router.get('/', requireAuth, (req, res) => {
     params.q = `%${String(req.query.search).trim()}%`;
   }
   if (req.query.agama) { where.push('w.agama = @agama'); params.agama = req.query.agama; }
+  if (req.query.kelurahan) {
+    if (req.query.kelurahan === '__kosong') where.push("(w.kelurahan IS NULL OR w.kelurahan = '')");
+    else { where.push('w.kelurahan = @kel'); params.kel = req.query.kelurahan; }
+  }
   const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
   const total = db.prepare(`SELECT COUNT(*) c FROM worship_places w ${whereSql}`).get(params).c;
   const rows = db
@@ -135,12 +140,15 @@ function validate(body) {
   const alamat = String(body.alamat || '').trim();
   if (alamat.length < 5) errors.push('Alamat lengkap minimal 5 karakter.');
 
-  return { nama, jenis, agama, alamat, errors };
+  const kelurahan = normKelurahan(body.kelurahan);
+  if (!kelurahan) errors.push('Kelurahan wajib dipilih (' + ENUMS.KELURAHAN.join(', ') + ').');
+
+  return { nama, jenis, agama, alamat, kelurahan, errors };
 }
 
 router.post('/', requireAuth, uploadPhotos, (req, res) => {
   const body = req.body || {};
-  const { nama, jenis, agama, alamat, errors } = validate(body);
+  const { nama, jenis, agama, alamat, kelurahan, errors } = validate(body);
 
   const lat = parseFloat(body.lat);
   const lng = parseFloat(body.lng);
@@ -153,10 +161,10 @@ router.post('/', requireAuth, uploadPhotos, (req, res) => {
   const seq = db.prepare('SELECT COALESCE(MAX(id),0)+1 n FROM worship_places').get().n;
   const ref = genRefCode(seq);
   const info = db.prepare(
-    `INSERT INTO worship_places (ref_code, owner_id, nama, jenis, agama, alamat, nama_pengelola, hp_pengelola, foto, lat, lng)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO worship_places (ref_code, owner_id, nama, jenis, agama, alamat, kelurahan, nama_pengelola, hp_pengelola, foto, lat, lng)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`
   ).run(
-    ref, req.user.sub, nama, jenis, agama, alamat,
+    ref, req.user.sub, nama, jenis, agama, alamat, kelurahan,
     String(body.nama_pengelola || '').trim() || null,
     String(body.hp_pengelola || '').trim() || null,
     foto, finalLat, finalLng
@@ -182,7 +190,7 @@ router.put('/:id', requireAuth, uploadPhotos, (req, res) => {
   }
 
   const body = req.body || {};
-  const { nama, jenis, agama, alamat, errors } = validate(body);
+  const { nama, jenis, agama, alamat, kelurahan, errors } = validate(body);
 
   const lat = parseFloat(body.lat);
   const lng = parseFloat(body.lng);
@@ -196,10 +204,10 @@ router.put('/:id', requireAuth, uploadPhotos, (req, res) => {
   if (errors.length) { cleanupFiles(req); return res.status(400).json({ error: errors.join(' ') }); }
 
   db.prepare(
-    `UPDATE worship_places SET nama=?, jenis=?, agama=?, alamat=?, nama_pengelola=?, hp_pengelola=?,
+    `UPDATE worship_places SET nama=?, jenis=?, agama=?, alamat=?, kelurahan=?, nama_pengelola=?, hp_pengelola=?,
       foto=?, lat=?, lng=?, updated_at=datetime('now') WHERE id=?`
   ).run(
-    nama, jenis, agama, alamat,
+    nama, jenis, agama, alamat, kelurahan,
     String(body.nama_pengelola || '').trim() || null,
     String(body.hp_pengelola || '').trim() || null,
     foto, finalLat, finalLng, row.id

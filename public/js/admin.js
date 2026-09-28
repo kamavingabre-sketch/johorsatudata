@@ -28,8 +28,13 @@ const Admin = (() => {
           <div class="admin-card-info">
             <h4>${App.escapeHtml(u.nama)}</h4>
             <p>@${App.escapeHtml(u.username)} · <span class="role-badge ${u.role}">${u.role}</span> · <span class="status-badge ${u.is_active ? 'active' : 'inactive'}">${u.is_active ? 'Aktif' : 'Nonaktif'}</span> · ${u.jumlah_data} data</p>
+            ${(u.jabatan || u.kelurahan || u.hp) ? `<p class="text-muted" style="font-size:0.85rem;">${[u.jabatan ? '🏷️ ' + App.escapeHtml(u.jabatan) : '', u.kelurahan ? '📍 Kel. ' + App.escapeHtml(u.kelurahan) : '', u.hp ? '📞 ' + App.escapeHtml(u.hp) : ''].filter(Boolean).join(' · ')}</p>` : ''}
+            ${u.approval === 'pending' ? '<p><span class="tag tag-orange">⏳ Menunggu persetujuan</span></p>' : ''}
+            ${u.approval === 'rejected' ? '<p><span class="tag tag-red">✖ Pendaftaran ditolak</span></p>' : ''}
           </div>
           <div class="admin-card-actions">
+            ${u.approval !== 'approved' ? `<button class="btn btn-sm btn-primary" onclick="Admin.setApproval(${u.id},'approved')" title="Setujui">✔ Setujui</button>` : ''}
+            ${u.approval === 'pending' ? `<button class="btn btn-sm btn-ghost" onclick="Admin.setApproval(${u.id},'rejected')" title="Tolak">✖ Tolak</button>` : ''}
             <button class="btn btn-sm btn-ghost" onclick="Admin.showEditUser(${u.id})" title="Edit">✏️</button>
             ${u.role !== 'superadmin' || data.users.filter(x => x.role === 'superadmin' && x.is_active).length > 1 ? `<button class="btn btn-sm btn-ghost" onclick="Admin.deleteUser(${u.id},'${App.escapeHtml(u.nama)}')" title="Hapus">🗑️</button>` : ''}
           </div>
@@ -55,8 +60,11 @@ const Admin = (() => {
     }
   }
 
-  function showUserModal(user) {
+  async function showUserModal(user) {
     const isEdit = !!user;
+    const meta = await App.fetchMeta();
+    const kelOpts = (meta.enums.kelurahan || []).map(k => `<option value="${App.escapeHtml(k)}" ${isEdit && user.kelurahan === k ? 'selected' : ''}>${App.escapeHtml(k)}</option>`).join('');
+    const jabOpts = (meta.enums.jabatan || []).map(k => `<option value="${App.escapeHtml(k)}" ${isEdit && user.jabatan === k ? 'selected' : ''}>${App.escapeHtml(k)}</option>`).join('');
     const html = `
       <form id="userForm">
         <div class="form-group">
@@ -67,6 +75,16 @@ const Admin = (() => {
         <div class="form-group">
           <label>Nama Lengkap <span class="required">*</span></label>
           <input type="text" name="nama" value="${isEdit ? App.escapeHtml(user.nama) : ''}" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Kelurahan</label>
+            <select name="kelurahan"><option value="">-- Pilih --</option>${kelOpts}</select>
+          </div>
+          <div class="form-group">
+            <label>Jabatan</label>
+            <select name="jabatan"><option value="">-- Pilih --</option>${jabOpts}</select>
+          </div>
         </div>
         <div class="form-group">
           <label>Role <span class="required">*</span></label>
@@ -109,6 +127,8 @@ const Admin = (() => {
           const body = {
             nama: fd.get('nama'),
             role: fd.get('role'),
+            kelurahan: fd.get('kelurahan'),
+            jabatan: fd.get('jabatan'),
           };
           if (!isEdit) {
             body.username = fd.get('username');
@@ -130,6 +150,16 @@ const Admin = (() => {
         });
       },
     });
+  }
+
+  async function setApproval(id, approval) {
+    try {
+      await App.api(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify({ approval }) });
+      Toast.success(approval === 'approved' ? 'Akun disetujui.' : 'Pendaftaran ditolak.');
+      await loadUsers();
+    } catch (e) {
+      Toast.error(e.message);
+    }
   }
 
   function deleteUser(id, nama) {
@@ -291,7 +321,7 @@ const Admin = (() => {
     });
   }
 
-  return { renderUsers, renderFields, showAddUser, showEditUser, deleteUser, showAddField, showEditField, toggleField, deleteField };
+  return { renderUsers, renderFields, showAddUser, showEditUser, setApproval, deleteUser, showAddField, showEditField, toggleField, deleteField };
 })();
 
 window.Admin = Admin;

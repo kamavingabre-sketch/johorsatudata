@@ -1,7 +1,7 @@
 const path = require('path');
 const express = require('express');
 const config = require('./src/config');
-const { init, ENUMS, db } = require('./src/db');
+const { init, ENUMS, LABELS, db } = require('./src/db');
 const { securityHeaders } = require('./src/util');
 
 const app = express();
@@ -29,7 +29,12 @@ app.get('/api/meta', (req, res) => {
       keamanan: ENUMS.KEAMANAN,
       jenis_bencana: ENUMS.JENIS_BENCANA,
       agama: ENUMS.AGAMA,
+      kelurahan: ENUMS.KELURAHAN,
+      jabatan: ENUMS.JABATAN,
+      skala_usaha: ENUMS.SKALA_USAHA,
+      jumlah_pekerja: ENUMS.JUMLAH_PEKERJA,
     },
+    labels: LABELS,
     center: [3.5786, 98.6373],
     zoom: 14,
   });

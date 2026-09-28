@@ -11,6 +11,11 @@ const Worship = (() => {
     container.innerHTML = `
       <div class="data-toolbar">
         <input type="text" class="search-input" id="worshipSearch" placeholder="Cari nama, alamat, pengurus, jenis...">
+        <select class="filter-select" id="worshipFilterKel">
+          <option value="">Semua Kelurahan</option>
+          ${(meta.enums.kelurahan || []).map(k => `<option value="${App.escapeHtml(k)}">${App.escapeHtml(k)}</option>`).join('')}
+          <option value="__kosong">— Belum diisi —</option>
+        </select>
         <select class="filter-select" id="worshipFilterAgama">
           <option value="">Semua Agama</option>
           ${(meta.enums.agama || []).map(k => `<option value="${k}">${k}</option>`).join('')}
@@ -27,6 +32,8 @@ const Worship = (() => {
       const params = new URLSearchParams({ page, per: 15 });
       if (search) params.set('search', search);
       if (agama) params.set('agama', agama);
+      const kel = document.getElementById('worshipFilterKel').value;
+      if (kel) params.set('kelurahan', kel);
       try {
         const data = await App.api(`/api/worship?${params}`);
         document.getElementById('worshipTableContainer').innerHTML = renderTable(data);
@@ -37,6 +44,7 @@ const Worship = (() => {
 
     document.getElementById('worshipSearch').addEventListener('input', App.debounce(() => { page = 1; loadData(); }));
     document.getElementById('worshipFilterAgama').addEventListener('change', () => { page = 1; loadData(); });
+    document.getElementById('worshipFilterKel').addEventListener('change', () => { page = 1; loadData(); });
     window._loadWorships = loadData;
     window._setWorshipPage = (p) => { page = p; loadData(); };
     await loadData();
@@ -46,7 +54,7 @@ const Worship = (() => {
     if (!data.rows.length) return `<div class="empty-state"><div class="empty-state-icon">🕌</div><h3>Belum ada data rumah ibadah</h3><p>Tambahkan data rumah ibadah baru.</p></div>`;
     let html = `<div class="data-table-wrap"><table class="data-table">
       <thead><tr>
-        <th>Kode</th><th>Nama</th><th>Jenis</th><th>Agama</th><th>Alamat</th>
+        <th>Kode</th><th>Nama</th><th>Kelurahan</th><th>Jenis</th><th>Agama</th><th>Alamat</th>
         <th>Pengurus</th><th>HP</th><th>Pendata</th><th>Aksi</th>
       </tr></thead><tbody>`;
     const user = Auth.getUser();
@@ -55,6 +63,7 @@ const Worship = (() => {
       html += `<tr>
         <td><code>${App.escapeHtml(r.ref)}</code></td>
         <td><a href="#detail-ibadah/${r.id}"><strong>${App.escapeHtml(r.nama)}</strong></a></td>
+        <td>${r.kelurahan ? `<span class="tag tag-blue">${App.escapeHtml(r.kelurahan)}</span>` : '<span class="text-muted">-</span>'}</td>
         <td><span class="tag">${App.escapeHtml(r.jenis)}</span></td>
         <td>${App.escapeHtml(r.agama || '-')}</td>
         <td title="${App.escapeHtml(r.alamat)}">${App.escapeHtml(r.alamat.substring(0, 40))}${r.alamat.length > 40 ? '...' : ''}</td>
@@ -64,7 +73,7 @@ const Worship = (() => {
         <td class="actions">
           <button class="btn btn-sm btn-ghost" onclick="window.location.hash='detail-ibadah/${r.id}'" title="Detail">👁️</button>
           ${canEdit ? `<button class="btn btn-sm btn-ghost" onclick="window.location.hash='edit-ibadah/${r.id}'" title="Edit">✏️</button>` : ''}
-          ${canEdit ? `<button class="btn btn-sm btn-ghost" onclick="Worship.deleteItem(${r.id},'${App.escapeHtml(r.nama)}')" title="Hapus">🗑️</button>` : ''}
+          ${canEdit ? `<button class="btn btn-sm btn-ghost" data-del-w="${r.id}" data-nama="${App.escapeHtml(r.nama)}" title="Hapus">🗑️</button>` : ''}
         </td>
       </tr>`;
     }
@@ -120,6 +129,13 @@ const Worship = (() => {
                   ${(meta.enums.agama || []).map(k => `<option value="${k}" ${isEdit && worship.agama === k ? 'selected' : ''}>${k}</option>`).join('')}
                 </select>
               </div>
+            </div>
+            <div class="form-group">
+              <label>Kelurahan <span class="required">*</span></label>
+              <select name="kelurahan" required>
+                <option value="">-- Pilih Kelurahan --</option>
+                ${(meta.enums.kelurahan || []).map(k => `<option value="${App.escapeHtml(k)}" ${isEdit && worship.kelurahan === k ? 'selected' : ''}>${App.escapeHtml(k)}</option>`).join('')}
+              </select>
             </div>
             <div class="form-group">
               <label>Alamat Lengkap <span class="required">*</span></label>
@@ -309,6 +325,7 @@ const Worship = (() => {
                 <dl>
                   <dt>Jenis Rumah Ibadah</dt><dd>${App.escapeHtml(w.jenis)}</dd>
                   <dt>Agama</dt><dd>${App.escapeHtml(w.agama || '-')}</dd>
+                  <dt>Kelurahan</dt><dd>${w.kelurahan ? `<span class="tag tag-blue">${App.escapeHtml(w.kelurahan)}</span>` : '<span class="text-muted">Belum diisi</span>'}</dd>
                   <dt>Alamat</dt><dd>${App.escapeHtml(w.alamat)}</dd>
                   <dt>Nama Pengurus</dt><dd>${App.escapeHtml(w.nama_pengelola || '-')}</dd>
                   <dt>HP Pengurus</dt><dd>${w.hp_pengelola ? `<a href="tel:${App.escapeHtml(w.hp_pengelola)}">${App.escapeHtml(w.hp_pengelola)}</a>` : '-'}</dd>
@@ -352,6 +369,11 @@ const Worship = (() => {
       } catch (e) { Toast.error(e.message); }
     });
   }
+
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest && e.target.closest('[data-del-w]');
+    if (b) deleteItem(b.dataset.delW, b.dataset.nama);
+  });
 
   return { renderList, renderForm, renderDetail, deleteItem };
 })();

@@ -13,11 +13,16 @@ Platform pendataan usaha digital untuk Kecamatan Medan Johor dengan peta interak
 - Filter dan pencarian lokasi
 
 ### 📝 Form Pendataan Lengkap
-- **Informasi Usaha**: Nama, jenis kepemilikan (PT/CV/Yayasan/Perseorangan), kategori usaha
+- **Informasi Usaha**: Nama, jenis kepemilikan (PT/CV/Yayasan/Perseorangan), kategori usaha, **skala usaha** (Mikro/Kecil/Sedang/Besar) dan **jumlah pekerja** (Dibawah 10 s/d Diatas 500)
 - **Izin & Keselamatan**: Status izin usaha + foto dokumen, kelengkapan keselamatan
 - **Penanggung Jawab**: Nama dan nomor HP
 - **Foto & Lokasi**: Upload foto usaha + pin lokasi di peta
 - **Kolom Dinamis**: Superadmin dapat menambah/menghapus kolom form tambahan
+
+### 🧾 Pendaftaran Akun Mandiri
+- Tab **Daftar Akun** di halaman login: nama, username, **Kelurahan** (Suka Maju, Titi Kuning, Kedai Durian, Pangkalan Masyhur, Gedung Johor, Kwala Bekala), **Jabatan** (ASN, LURAH, KEPLING), HP (opsional), password
+- Akun hasil pendaftaran berstatus **menunggu persetujuan**; Superadmin menyetujui/menolak di menu *Kelola Admin*
+- Pendaftar selalu berperan `admin` (tidak bisa menjadi superadmin lewat form)
 
 ### 🔐 Multi-Level Access
 - **Superadmin**: Akses penuh — CRUD semua data, kelola admin, lihat log aktivitas, kelola kolom form
@@ -380,6 +385,7 @@ pm2 restart johorsatudata
 
 ### Auth
 
+- `POST /api/auth/register` — Daftar akun baru (publik, menunggu persetujuan)
 - `POST /api/auth/login` — Login
 - `POST /api/auth/logout` — Logout
 - `GET /api/auth/me` — Get current user
@@ -425,6 +431,15 @@ npm run dev
 ```
 
 Server akan auto-restart saat ada perubahan file.
+
+### Isi Jabatan & Kelurahan Akun Lama
+
+Akun yang dibuat sebelum fitur pendaftaran belum punya jabatan/kelurahan. Skrip berikut mengisinya dari pola username (`kepling1sm`, `lurahgedungjohor`, dst):
+
+```bash
+node scripts/backfill-jabatan.js          # dry run: hanya menampilkan rencana
+node scripts/backfill-jabatan.js --apply  # simpan
+```
 
 ### Reset Database
 

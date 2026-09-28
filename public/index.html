@@ -372,6 +372,87 @@
       to { transform: rotate(360deg); }
     }
 
+
+    /* Tabs Masuk / Daftar */
+    .auth-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 5px;
+      margin-bottom: 28px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+    }
+    .auth-tab {
+      flex: 1;
+      padding: 11px 8px;
+      background: transparent;
+      border: none;
+      border-radius: 10px;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .auth-tab.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(102, 126, 234, 0.35);
+    }
+    .auth-panel { display: none; }
+    .auth-panel.active { display: block; }
+
+    /* Select & input tanpa ikon (form daftar) */
+    .form-group select,
+    .form-group input.plain {
+      width: 100%;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      color: white;
+      font-size: 15px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      z-index: 2;
+    }
+    .form-group select {
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+      padding-right: 44px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 16px center;
+      background-size: 18px;
+    }
+    .form-group select option { background: #1a1a2e; color: #fff; }
+    .form-group select:focus,
+    .form-group input.plain:focus {
+      outline: none;
+      background-color: rgba(255, 255, 255, 0.08);
+      border-color: #667eea;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+    .form-group input.plain::placeholder { color: rgba(255, 255, 255, 0.3); }
+    .form-hint { color: rgba(255, 255, 255, 0.4); font-size: 12px; margin-top: 6px; }
+    .form-group.compact { margin-bottom: 18px; }
+
+    /* Pesan sukses */
+    .success-message {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #4ade80;
+      padding: 14px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 20px;
+      display: none;
+      line-height: 1.5;
+    }
+    .success-message.show { display: block; }
+
     /* Footer */
     .footer {
       text-align: center;
@@ -411,7 +492,14 @@
         <p>Sistem Pendataan Usaha Medan Johor</p>
       </div>
 
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="auth-tab active" data-tab="login" role="tab">Masuk</button>
+        <button type="button" class="auth-tab" data-tab="register" role="tab">Daftar Akun</button>
+      </div>
+
+      <div class="auth-panel active" id="panelLogin">
       <form id="loginForm">
+        <div class="success-message" id="loginInfo"></div>
         <div class="error-message" id="errorMessage"></div>
 
         <div class="form-group">
@@ -450,6 +538,63 @@
           </span>
         </button>
       </form>
+      </div>
+
+      <div class="auth-panel" id="panelRegister">
+      <form id="registerForm" novalidate>
+        <div class="error-message" id="regError"></div>
+        <div class="success-message" id="regSuccess"></div>
+
+        <div class="form-group compact">
+          <label for="regNama">Nama Lengkap</label>
+          <input class="plain" type="text" id="regNama" name="nama" placeholder="Nama lengkap sesuai identitas" autocomplete="name" maxlength="80" required>
+        </div>
+
+        <div class="form-group compact">
+          <label for="regUsername">Username</label>
+          <input class="plain" type="text" id="regUsername" name="username" placeholder="huruf kecil, angka, titik, strip" autocomplete="username" maxlength="32" required>
+          <div class="form-hint">3-32 karakter. Tidak dapat diubah setelah dibuat.</div>
+        </div>
+
+        <div class="form-group compact">
+          <label for="regKelurahan">Kelurahan</label>
+          <select id="regKelurahan" name="kelurahan" required>
+            <option value="">-- Pilih Kelurahan --</option>
+          </select>
+        </div>
+
+        <div class="form-group compact">
+          <label for="regJabatan">Jabatan</label>
+          <select id="regJabatan" name="jabatan" required>
+            <option value="">-- Pilih Jabatan --</option>
+          </select>
+        </div>
+
+        <div class="form-group compact">
+          <label for="regHp">Nomor HP <span style="text-transform:none;opacity:.6">(opsional)</span></label>
+          <input class="plain" type="tel" id="regHp" name="hp" placeholder="08xxxxxxxxxx" autocomplete="tel" maxlength="17">
+        </div>
+
+        <div class="form-group compact">
+          <label for="regPassword">Password</label>
+          <input class="plain" type="password" id="regPassword" name="password" placeholder="Minimal 8 karakter" autocomplete="new-password" minlength="8" required>
+        </div>
+
+        <div class="form-group compact">
+          <label for="regPassword2">Ulangi Password</label>
+          <input class="plain" type="password" id="regPassword2" name="password2" placeholder="Ketik ulang password" autocomplete="new-password" required>
+        </div>
+
+        <button type="submit" class="btn-submit" id="regSubmitBtn">
+          <span class="btn-text">Daftar</span>
+          <span class="btn-loader">
+            <div class="spinner"></div>
+            Memproses...
+          </span>
+        </button>
+        <div class="form-hint" style="text-align:center;margin-top:14px;">Akun baru akan aktif setelah disetujui Superadmin.</div>
+      </form>
+      </div>
 
       <div class="footer">
         <p>&copy; 2026 JohorSatuData. Kecamatan Medan Johor.</p>
@@ -468,6 +613,97 @@
       particle.style.animationDuration = (Math.random() * 5 + 8) + 's';
       particlesContainer.appendChild(particle);
     }
+
+
+    // ---------- Tab Masuk / Daftar ----------
+    const tabs = document.querySelectorAll('.auth-tab');
+    const panels = { login: document.getElementById('panelLogin'), register: document.getElementById('panelRegister') };
+    function showTab(name) {
+      tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+      Object.entries(panels).forEach(([k, el]) => el.classList.toggle('active', k === name));
+      if (name === 'register') loadRegisterOptions();
+    }
+    tabs.forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
+    if (location.hash === '#daftar') showTab('register');
+
+    // ---------- Isi dropdown Kelurahan & Jabatan dari server ----------
+    let optionsLoaded = false;
+    async function loadRegisterOptions() {
+      if (optionsLoaded) return;
+      try {
+        const res = await fetch('/api/meta');
+        const meta = await res.json();
+        const fill = (id, list) => {
+          const sel = document.getElementById(id);
+          (list || []).forEach((v) => {
+            const o = document.createElement('option');
+            o.value = v;
+            o.textContent = v;
+            sel.appendChild(o);
+          });
+        };
+        fill('regKelurahan', meta.enums.kelurahan);
+        fill('regJabatan', meta.enums.jabatan);
+        optionsLoaded = true;
+      } catch (e) {
+        const box = document.getElementById('regError');
+        box.textContent = 'Gagal memuat pilihan kelurahan/jabatan. Muat ulang halaman.';
+        box.classList.add('show');
+      }
+    }
+
+    // ---------- Submit pendaftaran ----------
+    const regForm = document.getElementById('registerForm');
+    const regError = document.getElementById('regError');
+    const regSuccess = document.getElementById('regSuccess');
+    const regBtn = document.getElementById('regSubmitBtn');
+
+    regForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      regError.classList.remove('show');
+      regSuccess.classList.remove('show');
+
+      const f = regForm;
+      const showErr = (m) => { regError.textContent = m; regError.classList.add('show'); };
+      if (!f.nama.value.trim()) return showErr('Nama lengkap wajib diisi.');
+      if (!f.username.value.trim()) return showErr('Username wajib diisi.');
+      if (!f.kelurahan.value) return showErr('Kelurahan wajib dipilih.');
+      if (!f.jabatan.value) return showErr('Jabatan wajib dipilih.');
+      if (f.password.value.length < 8) return showErr('Password minimal 8 karakter.');
+      if (f.password.value !== f.password2.value) return showErr('Konfirmasi password tidak sama.');
+
+      regBtn.classList.add('loading');
+      regBtn.disabled = true;
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nama: f.nama.value.trim(),
+            username: f.username.value.trim(),
+            kelurahan: f.kelurahan.value,
+            jabatan: f.jabatan.value,
+            hp: f.hp.value.trim(),
+            password: f.password.value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Pendaftaran gagal');
+
+        const uname = f.username.value.trim().toLowerCase();
+        f.reset();
+        showTab('login');
+        const info = document.getElementById('loginInfo');
+        info.textContent = data.message || 'Pendaftaran berhasil. Akun akan aktif setelah disetujui Superadmin.';
+        info.classList.add('show');
+        document.getElementById('username').value = uname;
+      } catch (err) {
+        showErr(err.message);
+      } finally {
+        regBtn.classList.remove('loading');
+        regBtn.disabled = false;
+      }
+    });
 
     // Login form handler
     const form = document.getElementById('loginForm');
