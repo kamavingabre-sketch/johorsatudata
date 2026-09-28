@@ -24,6 +24,8 @@ test('CSP allows the Cloudflare Web Analytics beacon without broadening other so
     "'self'", "'unsafe-inline'", 'https://static.cloudflareinsights.com',
   ]);
   assert.deepEqual(directives.get('default-src'), ["'self'"]);
-  // Automatically injected Cloudflare beacons report to this site's /cdn-cgi/rum.
+  // Automatically injected Cloudflare beacons report to this site's /cdn-cgi/rum;
+  // manual-snippet beacons POST to https://cloudflareinsights.com/cdn-cgi/rum.
   assert.ok(directives.get('connect-src').includes("'self'"));
+  assert.ok(directives.get('connect-src').includes('https://cloudflareinsights.com'));
 });

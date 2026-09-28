@@ -72,7 +72,7 @@ function securityHeaders(req, res, next) {
       "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
       "style-src 'self' 'unsafe-inline' https://unpkg.com",
       "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://*.arcgisonline.com https://server.arcgisonline.com https://unpkg.com",
-      "connect-src 'self' https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://*.arcgisonline.com",
+      "connect-src 'self' https://cloudflareinsights.com https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://*.arcgisonline.com",
       "font-src 'self' data:",
       "media-src 'self' blob:",
       "frame-ancestors 'self' *",
