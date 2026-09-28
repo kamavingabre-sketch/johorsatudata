@@ -1141,6 +1141,8 @@ body.dashboard-page { min-height: 100vh; }
 }
 .modal-close:hover { background: #ebeae2; color: var(--ink); }
 .modal-close .icon { width: 18px; height: 18px; }
+/* `display: flex` di atas mengalahkan aturan [hidden] bawaan browser */
+.modal-close[hidden] { display: none; }
 
 .modal-body { padding: 20px; }
 .modal-body p { color: var(--ink-2); font-size: 14px; }
