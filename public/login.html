@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#123c2c">
+  <meta name="description" content="Login petugas — JohorSatuData Kecamatan Medan Johor">
+  <title>Masuk — JohorSatuData</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/login.css">
+</head>
+<body class="login-page">
+  <main class="login-layout">
+    <section class="brand-panel" aria-label="Tentang JohorSatuData">
+      <div class="brand-top">
+        <div class="crest" aria-hidden="true">
+          <svg viewBox="0 0 64 64" fill="none">
+            <path d="M32 6 52 13.5V32c0 12.6-8.3 21.8-20 25.5C20.3 53.8 12 44.6 12 32V13.5L32 6Z" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+            <path d="M21.5 44h21M24.5 39.5h15M26.5 39.5V26M31 39.5V26M35.5 39.5V26M24 24.5l8-7 8 7H24Z" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="agency-name">
+          <span>Pemerintah Kota Medan</span>
+          <strong>Kecamatan Medan Johor</strong>
+        </div>
+      </div>
+
+      <div class="brand-content">
+        <span class="eyebrow"><i></i> Portal data kecamatan</span>
+        <h1>Johor<span>Satu</span>Data</h1>
+        <p class="brand-description">Satu sumber data untuk mendukung pelayanan dan perencanaan wilayah Medan Johor.</p>
+
+        <div class="feature-list" aria-label="Fitur portal">
+          <div class="feature-item">
+            <span class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 6.3 5.5-1.8 6 1.8 5.5-1.8v13.2L15 19.5l-6-1.8-5.5 1.8V6.3Z"/><path d="M9 4.5v13.2M15 6.3v13.2"/></svg>
+            </span>
+            <span><strong>Peta informasi wilayah</strong><small>Jelajahi sebaran data secara geografis.</small></span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h4"/></svg>
+            </span>
+            <span><strong>Pendataan terstruktur</strong><small>Data tersimpan rapi dan mudah ditelusuri.</small></span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 5 6v5.4c0 4.4 2.9 7.6 7 9.1 4.1-1.5 7-4.7 7-9.1V6l-7-2.5Z"/><path d="m9.2 11.8 2 2 3.8-4"/></svg>
+            </span>
+            <span><strong>Akses yang terjaga</strong><small>Pengelolaan data sesuai peran petugas.</small></span>
+          </div>
+        </div>
+      </div>
+
+      <footer class="brand-footer">
+        <span>JohorSatuData</span>
+        <span aria-hidden="true">&middot;</span>
+        <span>Kota Medan, Sumatera Utara</span>
+      </footer>
+    </section>
+
+    <section class="login-panel" aria-labelledby="loginTitle">
+      <div class="login-box">
+        <div class="mobile-agency" aria-hidden="true">
+          <div class="crest">
+            <svg viewBox="0 0 64 64" fill="none"><path d="M32 6 52 13.5V32c0 12.6-8.3 21.8-20 25.5C20.3 53.8 12 44.6 12 32V13.5L32 6Z" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M21.5 44h21M24.5 39.5h15M26.5 39.5V26M31 39.5V26M35.5 39.5V26M24 24.5l8-7 8 7H24Z" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div><span>Pemerintah Kota Medan</span><strong>Kecamatan Medan Johor</strong></div>
+        </div>
+
+        <div class="login-heading">
+          <span class="login-kicker">Area petugas</span>
+          <h2 id="loginTitle">Selamat datang</h2>
+          <p>Masuk menggunakan akun petugas yang telah diberikan.</p>
+        </div>
+
+        <div class="alert error" id="errorMessage" role="alert" aria-live="polite"></div>
+
+        <form id="loginForm">
+          <div class="field">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" placeholder="Masukkan username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+          </div>
+          <div class="field">
+            <div class="field-label-row"><label for="password">Password</label></div>
+            <div class="password-wrap">
+              <input type="password" id="password" name="password" placeholder="Masukkan password" autocomplete="current-password" required>
+              <button type="button" class="password-toggle" id="passwordToggle" aria-label="Tampilkan password" aria-pressed="false">
+                <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.5-6.2 9.5-6.2 9.5 6.2 9.5 6.2-3.5 6.2-9.5 6.2S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.8"/></svg>
+                <svg class="eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 3 18 18M10.6 10.7a2 2 0 0 0 2.7 2.7"/><path d="M9.9 5.9A10.8 10.8 0 0 1 12 5.8c6 0 9.5 6.2 9.5 6.2a15.8 15.8 0 0 1-2.6 3.2M6.2 6.3C3.8 8 2.5 12 2.5 12s3.5 6.2 9.5 6.2c.9 0 1.7-.1 2.4-.4"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit" id="submitBtn">
+            <span class="btn-label">Masuk ke sistem</span>
+            <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12h15M13 5.5l6.5 6.5-6.5 6.5"/></svg>
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+        </form>
+
+        <aside class="account-note">
+          <span class="note-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></span>
+          <p><strong>Hanya ingin melihat data?</strong><br><a href="/" style="color:var(--forest-700);font-weight:600;">Kembali ke halaman publik</a> untuk melihat peta dan data usaha, bencana, dan rumah ibadah tanpa login.</p>
+        </aside>
+
+        <aside class="account-note">
+          <span class="note-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></span>
+          <p><strong>Belum memiliki akun?</strong><br>Akun petugas dikelola oleh Superadmin Kecamatan Medan Johor. Silakan hubungi pengelola di kantor kecamatan.</p>
+        </aside>
+
+        <footer class="login-footer">
+          <span>&copy; 2026 JohorSatuData</span>
+          <span>Aktivitas penggunaan sistem tercatat untuk keperluan administrasi.</span>
+        </footer>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const form = document.getElementById('loginForm');
+      const errorMessage = document.getElementById('errorMessage');
+      const submitBtn = document.getElementById('submitBtn');
+      const btnLabel = submitBtn.querySelector('.btn-label');
+      const password = document.getElementById('password');
+      const passwordToggle = document.getElementById('passwordToggle');
+
+      passwordToggle.addEventListener('click', () => {
+        const reveal = password.type === 'password';
+        password.type = reveal ? 'text' : 'password';
+        passwordToggle.setAttribute('aria-pressed', String(reveal));
+        passwordToggle.setAttribute('aria-label', reveal ? 'Sembunyikan password' : 'Tampilkan password');
+        password.focus();
+      });
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!form.reportValidity()) return;
+        errorMessage.classList.remove('show');
+        errorMessage.textContent = '';
+        submitBtn.classList.add('loading');
+        submitBtn.disabled = true;
+        submitBtn.setAttribute('aria-busy', 'true');
+        btnLabel.textContent = 'Memproses…';
+
+        try {
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: form.username.value.trim(), password: password.value }),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.error || 'Login gagal. Periksa kembali username dan password Anda.');
+          window.location.assign('/dashboard.html');
+        } catch (error) {
+          errorMessage.textContent = error.message || 'Tidak dapat terhubung ke server. Silakan coba lagi.';
+          errorMessage.classList.add('show');
+          submitBtn.classList.remove('loading');
+          submitBtn.disabled = false;
+          submitBtn.removeAttribute('aria-busy');
+          btnLabel.textContent = 'Masuk ke sistem';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

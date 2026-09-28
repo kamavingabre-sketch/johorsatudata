@@ -4,164 +4,597 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#123c2c">
-  <meta name="description" content="Portal pendataan Kecamatan Medan Johor">
-  <title>Masuk — JohorSatuData | Kecamatan Medan Johor</title>
+  <meta name="description" content="Peta data publik Kecamatan Medan Johor — usaha, titik rawan bencana, rumah ibadah.">
+  <title>JohorSatuData — Peta Data Publik Kecamatan Medan Johor</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/css/login.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+  <style>
+    :root {
+      --pub-ink: #142821;
+      --pub-ink-2: #3c4f45;
+      --pub-ink-3: #6b7c72;
+      --pub-green-700: #1a5c3e;
+      --pub-green-600: #246d4b;
+      --pub-green-50: #eaf4ee;
+      --pub-gold: #c29a41;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: var(--pub-ink);
+      background: #f6f5ef;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---------- Navbar ---------- */
+    .pub-nav {
+      position: sticky; top: 0; z-index: 1000;
+      background: rgba(255,255,255,.92);
+      backdrop-filter: saturate(160%) blur(10px);
+      border-bottom: 1px solid rgba(20,40,33,.08);
+    }
+    .pub-nav-inner {
+      max-width: 1280px; margin: 0 auto; padding: 12px 24px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    }
+    .pub-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+    .pub-brand svg { width: 36px; height: 36px; flex-shrink: 0; }
+    .pub-brand-name { font-size: 17px; font-weight: 760; color: var(--pub-green-700); letter-spacing: -.02em; line-height: 1.1; }
+    .pub-brand-sub { font-size: 11.5px; color: var(--pub-ink-3); margin-top: 2px; }
+    .pub-nav-links { display: flex; align-items: center; gap: 8px; }
+    .pub-nav-links a {
+      font-size: 13.5px; font-weight: 600; color: var(--pub-ink-2);
+      padding: 8px 14px; border-radius: 8px; text-decoration: none; transition: background .15s, color .15s;
+    }
+    .pub-nav-links a:hover { background: var(--pub-green-50); color: var(--pub-green-700); }
+    .pub-nav-links a.btn-primary {
+      background: var(--pub-green-700); color: #fff;
+      padding: 9px 18px; border-radius: 9px; font-weight: 650;
+      box-shadow: 0 1px 2px rgba(26,92,62,.25);
+    }
+    .pub-nav-links a.btn-primary:hover { background: var(--pub-green-600); color: #fff; }
+
+    /* ---------- Hero ---------- */
+    .pub-hero {
+      background: linear-gradient(135deg, #103325 0%, #1a5c3e 60%, #246d4b 100%);
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+    .pub-hero::before {
+      content: ''; position: absolute; inset: 0;
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(194,154,65,.25), transparent 45%),
+        radial-gradient(circle at 80% 70%, rgba(36,109,75,.6), transparent 50%);
+      pointer-events: none;
+    }
+    .pub-hero-inner {
+      position: relative;
+      max-width: 1280px; margin: 0 auto; padding: 56px 24px 48px;
+    }
+    .pub-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--pub-gold);
+      margin-bottom: 14px;
+    }
+    .pub-eyebrow i { width: 24px; height: 1px; background: var(--pub-gold); display: inline-block; }
+    .pub-hero h1 {
+      font-size: clamp(28px, 4.2vw, 46px);
+      font-weight: 800; line-height: 1.1; letter-spacing: -.02em;
+      margin: 0 0 14px;
+    }
+    .pub-hero h1 span { color: var(--pub-gold); }
+    .pub-hero p.lead {
+      font-size: clamp(14px, 1.6vw, 17px);
+      color: rgba(255,255,255,.85); line-height: 1.6;
+      max-width: 640px; margin: 0 0 28px;
+    }
+
+    /* Stats row */
+    .pub-stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px;
+      margin-top: 8px;
+    }
+    .pub-stat {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 14px; padding: 18px 20px;
+      backdrop-filter: blur(8px);
+    }
+    .pub-stat-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .pub-stat-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: rgba(255,255,255,.14); color: #fff;
+      display: grid; place-items: center;
+    }
+    .pub-stat-icon svg { width: 18px; height: 18px; }
+    .pub-stat-icon.gold { background: rgba(194,154,65,.25); color: var(--pub-gold); }
+    .pub-stat-num { font-size: 30px; font-weight: 800; line-height: 1; color: #fff; }
+    .pub-stat-label { font-size: 12.5px; color: rgba(255,255,255,.75); margin-top: 5px; font-weight: 500; }
+
+    /* ---------- Map section ---------- */
+    .pub-section { max-width: 1280px; margin: 0 auto; padding: 40px 24px 0; }
+    .pub-section-head { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+    .pub-section-head h2 {
+      font-size: clamp(20px, 2.5vw, 26px);
+      font-weight: 780; color: var(--pub-ink); margin: 0; letter-spacing: -.015em;
+    }
+    .pub-section-head p { margin: 4px 0 0; font-size: 14px; color: var(--pub-ink-3); }
+
+    .pub-map-card {
+      background: #fff; border: 1px solid rgba(20,40,33,.08);
+      border-radius: 18px; overflow: hidden;
+      box-shadow: 0 1px 3px rgba(20,40,33,.04), 0 10px 30px rgba(20,40,33,.06);
+    }
+    .pub-map-toolbar {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 14px 18px; border-bottom: 1px solid rgba(20,40,33,.06);
+      background: #fafaf6;
+    }
+    .map-search { flex: 1; min-width: 200px; position: relative; }
+    .map-search input {
+      width: 100%; height: 40px; padding: 0 14px 0 38px;
+      border: 1px solid rgba(20,40,33,.12); border-radius: 10px;
+      background: #fff; font-size: 13.5px; color: var(--pub-ink); outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .map-search input:focus { border-color: var(--pub-green-600); box-shadow: 0 0 0 3px rgba(26,92,62,.12); }
+    .map-search .sico { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--pub-ink-3); pointer-events: none; }
+    .map-search .sico svg { width: 16px; height: 16px; }
+    .layer-toggles { display: flex; gap: 6px; flex-wrap: wrap; }
+    .layer-chip {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 7px 12px; border-radius: 20px;
+      border: 1px solid rgba(20,40,33,.1); background: #fff;
+      font-size: 12.5px; font-weight: 600; color: var(--pub-ink-2);
+      cursor: pointer; user-select: none; transition: all .15s;
+    }
+    .layer-chip:hover { border-color: rgba(20,40,33,.2); }
+    .layer-chip .swatch { width: 10px; height: 10px; border-radius: 50%; }
+    .layer-chip .cnt {
+      font-size: 11px; font-weight: 700; color: var(--pub-ink-3);
+      background: rgba(20,40,33,.06); padding: 1px 7px; border-radius: 10px;
+    }
+    .layer-chip.active { background: var(--pub-green-700); color: #fff; border-color: var(--pub-green-700); }
+    .layer-chip.active .cnt { background: rgba(255,255,255,.22); color: #fff; }
+
+    .pub-map-body { display: flex; height: 560px; }
+    .pub-map-side {
+      width: 300px; flex-shrink: 0; padding: 14px; overflow-y: auto;
+      border-right: 1px solid rgba(20,40,33,.06); background: #fff;
+    }
+    .pub-map-side h4 {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--pub-ink-3); margin: 0 0 10px;
+    }
+    .map-result-list { display: flex; flex-direction: column; gap: 6px; }
+    .map-result-item {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 10px; border-radius: 10px; cursor: pointer;
+      transition: background .15s;
+    }
+    .map-result-item:hover { background: var(--pub-green-50); }
+    .map-result-item .dot {
+      width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0;
+    }
+    .map-result-item .ri-title { font-size: 13px; font-weight: 650; color: var(--pub-ink); line-height: 1.3; }
+    .map-result-item .ri-meta { font-size: 11.5px; color: var(--pub-ink-3); margin-top: 2px; }
+    .map-result-empty { font-size: 13px; color: var(--pub-ink-3); text-align: center; padding: 24px 8px; }
+    .pub-map-canvas { flex: 1; min-width: 0; position: relative; }
+    .pub-map-canvas .leaflet-container { height: 100%; width: 100%; background: #e7e3d6; }
+
+    /* Leaflet popup */
+    .map-popup { max-width: 280px; font-size: 13px; line-height: 1.5; }
+    .map-popup h3 { font-size: 14.5px; font-weight: 700; margin: 0 0 4px; color: var(--pub-ink); }
+    .map-popup p { margin: 3px 0; color: var(--pub-ink-2); }
+    .map-popup .map-popup-img { width: 100%; height: 130px; object-fit: cover; border-radius: 6px; margin-bottom: 8px; }
+    .map-popup .tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+    .mp-tag { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; }
+    .mp-tag.kel { background: #e5eef6; color: #275e8e; }
+    .mp-tag.biz { background: #e5f3ea; color: #1e7d46; }
+    .mp-tag.dis { background: #f9e7e5; color: #b23730; }
+    .mp-tag.wor { background: #ede5f5; color: #5e4187; }
+    .mp-tag.gath { background: #e5f3ea; color: #1e7d46; }
+
+    /* Custom marker */
+    .custom-marker-wrapper { background: transparent !important; border: none !important; }
+    .custom-marker {
+      width: 100%; height: 100%;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      display: grid; place-items: center;
+      border: 2.5px solid #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,.35);
+    }
+    .custom-marker .pin-icon { transform: rotate(45deg); color: #fff; display: grid; place-items: center; }
+    .custom-marker .pin-icon svg { width: 16px; height: 16px; }
+
+    /* ---------- CTA to data page ---------- */
+    .pub-cta {
+      margin-top: 24px; padding: 22px 26px;
+      background: #fff; border: 1px solid rgba(20,40,33,.08); border-radius: 16px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+      box-shadow: 0 1px 3px rgba(20,40,33,.04);
+    }
+    .pub-cta-text h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--pub-ink); }
+    .pub-cta-text p { margin: 4px 0 0; font-size: 13.5px; color: var(--pub-ink-3); }
+    .pub-cta a.btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 20px; border-radius: 10px;
+      background: var(--pub-green-700); color: #fff; text-decoration: none;
+      font-size: 14px; font-weight: 650; transition: background .15s;
+    }
+    .pub-cta a.btn:hover { background: var(--pub-green-600); }
+    .pub-cta a.btn svg { width: 16px; height: 16px; }
+
+    /* ---------- Footer ---------- */
+    .pub-footer {
+      max-width: 1280px; margin: 48px auto 0; padding: 28px 24px;
+      border-top: 1px solid rgba(20,40,33,.08);
+      text-align: center; color: var(--pub-ink-3); font-size: 12.5px;
+    }
+
+    /* ---------- Loading ---------- */
+    .pub-loading {
+      display: grid; place-items: center; height: 100%;
+      color: var(--pub-ink-3); font-size: 13px;
+    }
+    .spinner {
+      width: 28px; height: 28px; border: 3px solid rgba(20,40,33,.1);
+      border-top-color: var(--pub-green-700); border-radius: 50%;
+      animation: spin .8s linear infinite; margin-bottom: 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 860px) {
+      .pub-map-body { flex-direction: column; height: auto; }
+      .pub-map-side { width: 100%; max-height: 220px; border-right: none; border-bottom: 1px solid rgba(20,40,33,.06); }
+      .pub-map-canvas { height: 420px; }
+      .pub-nav-links a:not(.btn-primary) { display: none; }
+    }
+    @media (max-width: 520px) {
+      .pub-hero-inner { padding: 40px 20px 36px; }
+      .pub-section { padding: 28px 20px 0; }
+      .pub-stats { grid-template-columns: 1fr 1fr; }
+      .pub-nav-inner { padding: 12px 20px; }
+      .pub-cta { padding: 18px 20px; }
+    }
+  </style>
 </head>
-<body class="login-page">
-  <main class="login-layout">
-    <section class="brand-panel" aria-label="Tentang JohorSatuData">
-      <div class="brand-top">
-        <div class="crest" aria-hidden="true">
-          <svg viewBox="0 0 64 64" fill="none">
-            <path d="M32 6 52 13.5V32c0 12.6-8.3 21.8-20 25.5C20.3 53.8 12 44.6 12 32V13.5L32 6Z" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
-            <path d="M21.5 44h21M24.5 39.5h15M26.5 39.5V26M31 39.5V26M35.5 39.5V26M24 24.5l8-7 8 7H24Z" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+<body>
+
+  <!-- Navbar -->
+  <nav class="pub-nav" aria-label="Navigasi utama">
+    <div class="pub-nav-inner">
+      <a href="/" class="pub-brand">
+        <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+          <path d="M32 6l20 7.5V32c0 12.6-8.3 21.8-20 25.5C20.3 53.8 12 44.6 12 32V13.5L32 6z" fill="none" stroke="#1a5c3e" stroke-width="2.6" stroke-linejoin="round"/>
+          <path d="M21.5 44h21M24.5 39.5h15M26.5 39.5V26M31 39.5V26M35.5 39.5V26M24 24.5 32 17.5l8 7h-16z" fill="none" stroke="#1a5c3e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <div class="pub-brand-name">JohorSatuData</div>
+          <div class="pub-brand-sub">Kecamatan Medan Johor</div>
         </div>
-        <div class="agency-name">
-          <span>Pemerintah Kota Medan</span>
-          <strong>Kecamatan Medan Johor</strong>
+      </a>
+      <div class="pub-nav-links">
+        <a href="#peta">Peta</a>
+        <a href="/data.html">Data Lengkap</a>
+        <a href="/login.html" class="btn-primary">Masuk Petugas</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <header class="pub-hero">
+    <div class="pub-hero-inner">
+      <span class="pub-eyebrow"><i></i>Portal Data Terbuka</span>
+      <h1>Peta Data <span>Kecamatan Medan Johor</span></h1>
+      <p class="lead">
+        Jelajahi sebaran data usaha, titik rawan bencana, titik kumpul evakuasi, dan rumah ibadah
+        di wilayah Kecamatan Medan Johor secara interaktif. Semua data dapat diakses masyarakat
+        tanpa perlu masuk (login).
+      </p>
+      <div class="pub-stats" id="pubStats">
+        <div class="pub-stat"><div class="pub-stat-num">—</div><div class="pub-stat-label">Memuat…</div></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Map Section -->
+  <section class="pub-section" id="peta">
+    <div class="pub-section-head">
+      <div>
+        <h2>Peta Interaktif</h2>
+        <p>Klik marker untuk melihat detail. Gunakan kotak centang untuk menyaring kategori, dan pencarian untuk menemukan lokasi.</p>
+      </div>
+    </div>
+
+    <div class="pub-map-card">
+      <div class="pub-map-toolbar">
+        <div class="map-search">
+          <span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+          <input type="search" id="mapSearch" placeholder="Cari nama, alamat, kelurahan…" autocomplete="off">
         </div>
+        <div class="layer-toggles" id="layerToggles"></div>
       </div>
 
-      <div class="brand-content">
-        <span class="eyebrow"><i></i> Portal data kecamatan</span>
-        <h1>Johor<span>Satu</span>Data</h1>
-        <p class="brand-description">Satu sumber data untuk mendukung pelayanan dan perencanaan wilayah Medan Johor.</p>
-
-        <div class="feature-list" aria-label="Fitur portal">
-          <div class="feature-item">
-            <span class="feature-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 6.3 5.5-1.8 6 1.8 5.5-1.8v13.2L15 19.5l-6-1.8-5.5 1.8V6.3Z"/><path d="M9 4.5v13.2M15 6.3v13.2"/></svg>
-            </span>
-            <span><strong>Peta informasi wilayah</strong><small>Jelajahi sebaran data secara geografis.</small></span>
+      <div class="pub-map-body">
+        <aside class="pub-map-side" id="mapSide">
+          <h4>Daftar Lokasi <span id="sideCount" style="color:var(--pub-ink-3);font-weight:600;"></span></h4>
+          <div class="map-result-list" id="resultList">
+            <div class="map-result-empty">Memuat data…</div>
           </div>
-          <div class="feature-item">
-            <span class="feature-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h4"/></svg>
-            </span>
-            <span><strong>Pendataan terstruktur</strong><small>Data tersimpan rapi dan mudah ditelusuri.</small></span>
-          </div>
-          <div class="feature-item">
-            <span class="feature-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 5 6v5.4c0 4.4 2.9 7.6 7 9.1 4.1-1.5 7-4.7 7-9.1V6l-7-2.5Z"/><path d="m9.2 11.8 2 2 3.8-4"/></svg>
-            </span>
-            <span><strong>Akses yang terjaga</strong><small>Pengelolaan data sesuai peran petugas.</small></span>
-          </div>
-        </div>
-      </div>
-
-      <footer class="brand-footer">
-        <span>JohorSatuData</span>
-        <span aria-hidden="true">&middot;</span>
-        <span>Kota Medan, Sumatera Utara</span>
-      </footer>
-    </section>
-
-    <section class="login-panel" aria-labelledby="loginTitle">
-      <div class="login-box">
-        <div class="mobile-agency" aria-hidden="true">
-          <div class="crest">
-            <svg viewBox="0 0 64 64" fill="none"><path d="M32 6 52 13.5V32c0 12.6-8.3 21.8-20 25.5C20.3 53.8 12 44.6 12 32V13.5L32 6Z" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M21.5 44h21M24.5 39.5h15M26.5 39.5V26M31 39.5V26M35.5 39.5V26M24 24.5l8-7 8 7H24Z" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </div>
-          <div><span>Pemerintah Kota Medan</span><strong>Kecamatan Medan Johor</strong></div>
-        </div>
-
-        <div class="login-heading">
-          <span class="login-kicker">Area petugas</span>
-          <h2 id="loginTitle">Selamat datang</h2>
-          <p>Masuk menggunakan akun petugas yang telah diberikan.</p>
-        </div>
-
-        <div class="alert error" id="errorMessage" role="alert" aria-live="polite"></div>
-
-        <form id="loginForm">
-          <div class="field">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" placeholder="Masukkan username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
-          </div>
-          <div class="field">
-            <div class="field-label-row"><label for="password">Password</label></div>
-            <div class="password-wrap">
-              <input type="password" id="password" name="password" placeholder="Masukkan password" autocomplete="current-password" required>
-              <button type="button" class="password-toggle" id="passwordToggle" aria-label="Tampilkan password" aria-pressed="false">
-                <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.5-6.2 9.5-6.2 9.5 6.2 9.5 6.2-3.5 6.2-9.5 6.2S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.8"/></svg>
-                <svg class="eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 3 18 18M10.6 10.7a2 2 0 0 0 2.7 2.7"/><path d="M9.9 5.9A10.8 10.8 0 0 1 12 5.8c6 0 9.5 6.2 9.5 6.2a15.8 15.8 0 0 1-2.6 3.2M6.2 6.3C3.8 8 2.5 12 2.5 12s3.5 6.2 9.5 6.2c.9 0 1.7-.1 2.4-.4"/></svg>
-              </button>
-            </div>
-          </div>
-
-          <button type="submit" class="btn-submit" id="submitBtn">
-            <span class="btn-label">Masuk ke sistem</span>
-            <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12h15M13 5.5l6.5 6.5-6.5 6.5"/></svg>
-            <span class="spinner" aria-hidden="true"></span>
-          </button>
-        </form>
-
-        <aside class="account-note">
-          <span class="note-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></span>
-          <p><strong>Ingin melihat data?</strong><br>Kunjungi halaman <a href="/data.html" style="color:var(--forest-700);font-weight:600;">Data Publik</a> untuk melihat semua data usaha, bencana, dan rumah ibadah tanpa perlu login.</p>
         </aside>
-
-        <aside class="account-note">
-          <span class="note-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></span>
-          <p><strong>Belum memiliki akun?</strong><br>Akun petugas dikelola oleh Superadmin Kecamatan Medan Johor. Silakan hubungi pengelola di kantor kecamatan.</p>
-        </aside>
-
-        <footer class="login-footer">
-          <span>&copy; 2026 JohorSatuData</span>
-          <span>Aktivitas penggunaan sistem tercatat untuk keperluan administrasi.</span>
-        </footer>
+        <div class="pub-map-canvas" id="mapCanvas">
+          <div class="pub-loading"><div><div class="spinner"></div>Memuat peta…</div></div>
+        </div>
       </div>
-    </section>
-  </main>
+    </div>
 
+    <div class="pub-cta">
+      <div class="pub-cta-text">
+        <h3>Butuh data lebih lengkap?</h3>
+        <p>Lihat daftar terperinci, pencarian dan filter lanjutan di halaman data publik.</p>
+      </div>
+      <a href="/data.html" class="btn">
+        Lihat Semua Data
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+  </section>
+
+  <footer class="pub-footer">
+    &copy; 2026 JohorSatuData — Pemerintah Kota Medan, Kecamatan Medan Johor, Sumatera Utara
+  </footer>
+
+  <script src="/vendor/leaflet/leaflet.js"></script>
+  <script src="/js/icons.js"></script>
   <script>
     (() => {
-      const form = document.getElementById('loginForm');
-      const errorMessage = document.getElementById('errorMessage');
-      const submitBtn = document.getElementById('submitBtn');
-      const btnLabel = submitBtn.querySelector('.btn-label');
-      const password = document.getElementById('password');
-      const passwordToggle = document.getElementById('passwordToggle');
+      const esc = (s) => s == null ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      const gmapsDir = (la, ln) => `https://www.google.com/maps/dir/?api=1&destination=${la},${ln}`;
 
-      passwordToggle.addEventListener('click', () => {
-        const reveal = password.type === 'password';
-        password.type = reveal ? 'text' : 'password';
-        passwordToggle.setAttribute('aria-pressed', String(reveal));
-        passwordToggle.setAttribute('aria-label', reveal ? 'Sembunyikan password' : 'Tampilkan password');
-        password.focus();
-      });
+      const TYPES = {
+        business:  { label: 'Usaha',          color: '#275e8e', glyph: 'store' },
+        disaster:  { label: 'Rawan Bencana',  color: '#b23730', glyph: 'warning' },
+        gathering: { label: 'Titik Kumpul',   color: '#1e7d46', glyph: 'tent' },
+        worship:   { label: 'Rumah Ibadah',   color: '#5e4187', glyph: 'landmark' },
+      };
+      const KAT_COLORS = {
+        'PERDAGANGAN': '#1a73e8', 'KULINER': '#ea4335', 'JASA PERAWATAN KECANTIKAN': '#e91e63',
+        'JASA PERBAIKAN DAN TEKNIK': '#ff9800', 'LAUNDRY DAN DOORSMEER': '#9c27b0',
+        'PRODUKSI DAN INDUSTRI RUMAH TANGGA': '#607d8b', 'PERTANIAN': '#4caf50',
+        'PERIKANAN': '#00bcd4', 'PETERNAKAN': '#795548',
+      };
 
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        if (!form.reportValidity()) return;
-        errorMessage.classList.remove('show');
-        errorMessage.textContent = '';
-        submitBtn.classList.add('loading');
-        submitBtn.disabled = true;
-        submitBtn.setAttribute('aria-busy', 'true');
-        btnLabel.textContent = 'Memproses…';
+      function makeIcon(glyph, color, size = 34) {
+        return L.divIcon({
+          className: 'custom-marker-wrapper',
+          html: `<div class="custom-marker" style="background:${color}"><span class="pin-icon">${Icon.i(glyph)}</span></div>`,
+          iconSize: [size, size], iconAnchor: [size/2, size], popupAnchor: [0, -size],
+        });
+      }
 
+      const photoTag = (src) => src ? `<img src="${esc(src)}" class="map-popup-img" alt="Foto" loading="lazy">` : '';
+
+      /* ---------- Stats ---------- */
+      async function loadStats() {
         try {
-          const response = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: form.username.value.trim(), password: password.value }),
-          });
-          const data = await response.json().catch(() => ({}));
-          if (!response.ok) throw new Error(data.error || 'Login gagal. Periksa kembali username dan password Anda.');
-          window.location.assign('/dashboard.html');
-        } catch (error) {
-          errorMessage.textContent = error.message || 'Tidak dapat terhubung ke server. Silakan coba lagi.';
-          errorMessage.classList.add('show');
-          submitBtn.classList.remove('loading');
-          submitBtn.disabled = false;
-          submitBtn.removeAttribute('aria-busy');
-          btnLabel.textContent = 'Masuk ke sistem';
+          const r = await fetch('/api/publik/summary');
+          const d = await r.json();
+          document.getElementById('pubStats').innerHTML = `
+            <div class="pub-stat">
+              <div class="pub-stat-top"><div class="pub-stat-num">${d.bizTotal}</div><div class="pub-stat-icon">${Icon.i('store')}</div></div>
+              <div class="pub-stat-label">Data Usaha</div>
+            </div>
+            <div class="pub-stat">
+              <div class="pub-stat-top"><div class="pub-stat-num">${d.disTotal}</div><div class="pub-stat-icon gold">${Icon.i('warning')}</div></div>
+              <div class="pub-stat-label">Titik Rawan Bencana</div>
+            </div>
+            <div class="pub-stat">
+              <div class="pub-stat-top"><div class="pub-stat-num">${d.worTotal}</div><div class="pub-stat-icon" style="background:rgba(237,229,245,.35);color:#d3bdee;">${Icon.i('landmark')}</div></div>
+              <div class="pub-stat-label">Rumah Ibadah</div>
+            </div>`;
+        } catch (e) { console.error(e); }
+      }
+
+      /* ---------- Map ---------- */
+      const state = { layers: { business: true, disaster: true, gathering: true, worship: true }, q: '' };
+      let map, leafLayers = {}, allItems = [];
+
+      function fitMapToVisible() {
+        const visible = allItems.filter(it => state.layers[it.type] && matchesQ(it, state.q));
+        if (!visible.length) { map.setView([3.5750, 98.6400], 14); return; }
+        const bounds = L.latLngBounds(visible.map(i => i.latlng));
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
+      }
+
+      function matchesQ(it, q) {
+        if (!q) return true;
+        return (it.name + ' ' + (it.kel||'') + ' ' + (it.sub||'') + ' ' + (it.alamat||'')).toLowerCase().includes(q);
+      }
+
+      function renderPopupsAndList() {
+        // Remove all markers
+        Object.values(leafLayers).forEach(lg => lg.clearLayers());
+
+        const visible = [];
+        for (const it of allItems) {
+          if (!state.layers[it.type]) continue;
+          if (!matchesQ(it, state.q)) continue;
+          leafLayers[it.type].addLayer(it.marker);
+          visible.push(it);
         }
-      });
+
+        // Result list
+        const list = document.getElementById('resultList');
+        document.getElementById('sideCount').textContent = `(${visible.length})`;
+        if (!visible.length) {
+          list.innerHTML = '<div class="map-result-empty">Tidak ada lokasi yang cocok.</div>';
+          return;
+        }
+        list.innerHTML = visible.slice(0, 200).map(it => `
+          <div class="map-result-item" data-id="${it.id}" data-type="${it.type}">
+            <span class="dot" style="background:${TYPES[it.type].color}"></span>
+            <div style="min-width:0;flex:1;">
+              <div class="ri-title">${esc(it.name)}</div>
+              <div class="ri-meta">${esc(TYPES[it.type].label)}${it.kel ? ' · Kel. ' + esc(it.kel) : ''}</div>
+            </div>
+          </div>
+        `).join('');
+        list.querySelectorAll('.map-result-item').forEach(el => {
+          el.addEventListener('click', () => {
+            const it = allItems.find(x => x.id === el.dataset.id && x.type === el.dataset.type);
+            if (!it) return;
+            if (!map.hasLayer(leafLayers[it.type])) { /* safety */ }
+            map.flyTo(it.latlng, 16, { duration: 0.6 });
+            setTimeout(() => it.marker.openPopup(), 400);
+          });
+        });
+      }
+
+      function buildLayerToggles() {
+        const el = document.getElementById('layerToggles');
+        el.innerHTML = Object.entries(TYPES).map(([k, v]) => {
+          const n = allItems.filter(x => x.type === k).length;
+          return `<button class="layer-chip ${state.layers[k] ? 'active' : ''}" data-type="${k}">
+            <span class="swatch" style="background:${v.color}"></span>${v.label}<span class="cnt">${n}</span>
+          </button>`;
+        }).join('');
+        el.querySelectorAll('.layer-chip').forEach(chip => {
+          chip.addEventListener('click', () => {
+            const t = chip.dataset.type;
+            state.layers[t] = !state.layers[t];
+            chip.classList.toggle('active');
+            renderPopupsAndList();
+          });
+        });
+      }
+
+      async function initMap() {
+        const JOHOR = [3.5750, 98.6400];
+        map = L.map('mapCanvas', { center: JOHOR, zoom: 14, minZoom: 3, maxZoom: 19, zoomControl: false });
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        const street = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 19,
+        }).addTo(map);
+        const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri', maxZoom: 19,
+        });
+        L.control.layers({ 'Peta Jalan': street, 'Citra Satelit': sat }, null, { position: 'topright' }).addTo(map);
+
+        // Scale
+        L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
+
+        for (const t of Object.keys(TYPES)) leafLayers[t] = L.layerGroup().addTo(map);
+
+        const safe = async (url, fn) => { try { const r = await fetch(url); fn(await r.json()); } catch(e) { console.error(e); } };
+        let idc = 0;
+        const nextId = () => 'm' + (++idc);
+
+        await safe('/api/publik/businesses/map', (r) => r.places.forEach(p => {
+          if (p.lat == null || p.lng == null) return;
+          const color = KAT_COLORS[p.kategori_usaha] || TYPES.business.color;
+          const catIcon = Icon.kategori(p.kategori_usaha);
+          const icon = makeIcon(catIcon, color);
+          const marker = L.marker([p.lat, p.lng], { icon });
+          marker.bindPopup(`<div class="map-popup">
+            ${photoTag(p.foto_usaha)}
+            <h3>${esc(p.nama_usaha)}</h3>
+            <div class="tags">
+              ${p.kelurahan ? `<span class="mp-tag kel">Kel. ${esc(p.kelurahan)}</span>` : ''}
+              <span class="mp-tag biz">${esc(p.kategori_usaha)}</span>
+            </div>
+            <p>📍 ${esc(p.alamat)}</p>
+            <p>👤 ${esc(p.nama_pic)}</p>
+            <p><a href="${gmapsDir(p.lat,p.lng)}" target="_blank" rel="noopener" style="color:var(--pub-green-700);font-weight:600;">Buka di Google Maps →</a></p>
+          </div>`, { maxWidth: 300 });
+          leafLayers.business.addLayer(marker);
+          allItems.push({ id: nextId(), type: 'business', name: p.nama_usaha, kel: p.kelurahan||'', sub: p.kategori_usaha, alamat: p.alamat, latlng: [p.lat,p.lng], marker });
+        }));
+
+        await safe('/api/publik/disasters/map', (r) => r.places.forEach(p => {
+          if (p.lat != null && p.lng != null) {
+            const icon = makeIcon('warning', TYPES.disaster.color);
+            const marker = L.marker([p.lat, p.lng], { icon });
+            marker.bindPopup(`<div class="map-popup">
+              ${photoTag(p.foto)}
+              <h3>${esc(p.nama_lokasi)}</h3>
+              <div class="tags">
+                ${p.kelurahan ? `<span class="mp-tag kel">Kel. ${esc(p.kelurahan)}</span>` : ''}
+                <span class="mp-tag dis">${esc(p.jenis_bencana)}</span>
+              </div>
+              <p>📍 ${esc(p.alamat)}</p>
+              <p>Penyebab: ${esc(p.penyebab)}</p>
+              <p><a href="${gmapsDir(p.lat,p.lng)}" target="_blank" rel="noopener" style="color:var(--pub-green-700);font-weight:600;">Buka di Google Maps →</a></p>
+            </div>`, { maxWidth: 300 });
+            leafLayers.disaster.addLayer(marker);
+            allItems.push({ id: nextId(), type: 'disaster', name: p.nama_lokasi, kel: p.kelurahan||'', sub: p.jenis_bencana, alamat: p.alamat, latlng: [p.lat,p.lng], marker });
+          }
+          if (p.titik_kumpul_lat != null && p.titik_kumpul_lng != null) {
+            const icon = makeIcon('tent', TYPES.gathering.color);
+            const marker = L.marker([p.titik_kumpul_lat, p.titik_kumpul_lng], { icon });
+            marker.bindPopup(`<div class="map-popup">
+              ${photoTag(p.titik_kumpul_foto)}
+              <h3>Titik Kumpul Evakuasi</h3>
+              <div class="tags">
+                ${p.kelurahan ? `<span class="mp-tag kel">Kel. ${esc(p.kelurahan)}</span>` : ''}
+                <span class="mp-tag gath">Posko / Evakuasi</span>
+              </div>
+              <p>📍 ${esc(p.titik_kumpul || '-')}</p>
+              <p>Untuk: <strong>${esc(p.nama_lokasi)}</strong></p>
+              <p><a href="${gmapsDir(p.titik_kumpul_lat,p.titik_kumpul_lng)}" target="_blank" rel="noopener" style="color:var(--pub-green-700);font-weight:600;">Buka di Google Maps →</a></p>
+            </div>`, { maxWidth: 300 });
+            leafLayers.gathering.addLayer(marker);
+            allItems.push({ id: nextId(), type: 'gathering', name: 'Titik Kumpul — ' + p.nama_lokasi, kel: p.kelurahan||'', sub: 'Evakuasi', alamat: p.titik_kumpul||'', latlng: [p.titik_kumpul_lat,p.titik_kumpul_lng], marker });
+          }
+        }));
+
+        await safe('/api/publik/worship/map', (r) => r.places.forEach(p => {
+          if (p.lat == null || p.lng == null) return;
+          const icon = makeIcon('landmark', TYPES.worship.color);
+          const marker = L.marker([p.lat, p.lng], { icon });
+          marker.bindPopup(`<div class="map-popup">
+            ${photoTag(p.foto)}
+            <h3>${esc(p.nama)}</h3>
+            <div class="tags">
+              ${p.kelurahan ? `<span class="mp-tag kel">Kel. ${esc(p.kelurahan)}</span>` : ''}
+              <span class="mp-tag wor">${esc(p.agama)}</span>
+            </div>
+            <p>${esc(p.jenis)}</p>
+            <p>📍 ${esc(p.alamat)}</p>
+            ${p.nama_pengelola ? `<p>👤 ${esc(p.nama_pengelola)}</p>` : ''}
+            <p><a href="${gmapsDir(p.lat,p.lng)}" target="_blank" rel="noopener" style="color:var(--pub-green-700);font-weight:600;">Buka di Google Maps →</a></p>
+          </div>`, { maxWidth: 300 });
+          leafLayers.worship.addLayer(marker);
+          allItems.push({ id: nextId(), type: 'worship', name: p.nama, kel: p.kelurahan||'', sub: p.agama + ' ' + p.jenis, alamat: p.alamat, latlng: [p.lat,p.lng], marker });
+        }));
+
+        buildLayerToggles();
+        renderPopupsAndList();
+
+        // Search input
+        document.getElementById('mapSearch').addEventListener('input', function() {
+          state.q = this.value.trim().toLowerCase();
+          renderPopupsAndList();
+        });
+
+        // Invalid size after layout
+        setTimeout(() => map.invalidateSize(), 200);
+        setTimeout(fitMapToVisible, 300);
+      }
+
+      /* ---------- Boot ---------- */
+      loadStats();
+      initMap();
     })();
   </script>
 </body>

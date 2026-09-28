@@ -21,7 +21,7 @@ const App = (() => {
     if (!res.ok) {
       if (res.status === 401) {
         Toast.error('Sesi berakhir. Silakan login kembali.');
-        setTimeout(() => window.location.href = '/', 1500);
+        setTimeout(() => window.location.href = '/login.html', 1500);
       }
       throw new Error(data.error || `HTTP ${res.status}`);
     }
