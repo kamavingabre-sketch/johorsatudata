@@ -13,7 +13,6 @@ app.use(express.json({ limit: '2mb' }));
 /* ---------- routes ---------- */
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/users', require('./src/routes/users'));
-app.use('/api/fields', require('./src/routes/fields'));
 app.use('/api/businesses', require('./src/routes/businesses'));
 app.use('/api/disasters', require('./src/routes/disasters'));
 app.use('/api/worship', require('./src/routes/worship'));

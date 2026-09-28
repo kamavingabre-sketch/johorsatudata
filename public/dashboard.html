@@ -2,108 +2,130 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - JohorSatuData</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#103325">
+  <title>Dashboard — JohorSatuData</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/theme.css">
   <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
 </head>
 <body class="dashboard-page">
-  <!-- Loading Overlay -->
+  <!-- Overlay pemuatan awal -->
   <div id="loadingOverlay" class="loading-overlay">
     <div class="spinner"></div>
-    <p>Memuat data...</p>
+    <p>Memuat data…</p>
   </div>
 
+  <!-- Latar gelap untuk sidebar di layar kecil -->
+  <button class="sidebar-backdrop" id="sidebarBackdrop" aria-label="Tutup menu" tabindex="-1"></button>
+
   <!-- Sidebar -->
-  <aside class="sidebar" id="sidebar">
+  <aside class="sidebar" id="sidebar" aria-label="Menu navigasi">
     <div class="sidebar-header">
-      <span class="logo-icon">📊</span>
-      <span class="logo-text">JohorSatuData</span>
+      <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
+        <path d="M32 6l20 7.5V32c0 12.6-8.3 21.8-20 25.5C20.3 53.8 12 44.6 12 32V13.5L32 6z" fill="none" stroke="#e8c56a" stroke-width="2.6" stroke-linejoin="round"/>
+        <path d="M21.5 44h21M24.5 39.5h15M26.5 39.5V26M31 39.5V26M35.5 39.5V26M24 24.5 32 17.5l8 7h-16z" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <div class="brand-name">JohorSatuData</div>
+        <div class="brand-sub">Kec. Medan Johor</div>
+      </div>
+      <button class="sidebar-close" id="sidebarClose" aria-label="Tutup menu">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg>
+      </button>
     </div>
+
     <nav class="sidebar-nav">
-      <a href="#dashboard" class="nav-item active" data-page="dashboard">
-        <span class="nav-icon">🏠</span>
+      <a href="#dashboard" class="nav-item active" data-page="dashboard" id="nav-dashboard">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.2"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.2"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.2"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.2"/></svg>
         <span>Dashboard</span>
       </a>
       <a href="#peta" class="nav-item" data-page="peta">
-        <span class="nav-icon">🗺️</span>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5 3.5 6.3v13.2L9 17.7l6 1.8 5.5-1.8V4.5L15 6.3l-6-1.8z"/><path d="M9 4.5v13.2M15 6.3v13.2"/></svg>
         <span>Peta Data</span>
       </a>
       <a href="#data" class="nav-item" data-page="data">
-        <span class="nav-icon">📋</span>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="4" rx="1"/><rect x="3.5" y="10" width="17" height="4" rx="1"/><rect x="3.5" y="15.5" width="17" height="4" rx="1"/></svg>
         <span>Data Usaha</span>
       </a>
       <a href="#tambah" class="nav-item" data-page="tambah">
-        <span class="nav-icon">➕</span>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         <span>Tambah Usaha</span>
       </a>
+
       <div class="nav-divider"><span>Bencana</span></div>
       <a href="#bencana" class="nav-item" data-page="bencana">
-        <span class="nav-icon">🌊</span>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.8 19.5h18.4L12 4z"/><path d="M12 10v4.2"/></svg>
         <span>Titik Rawan Bencana</span>
       </a>
       <a href="#tambah-bencana" class="nav-item" data-page="tambah-bencana">
-        <span class="nav-icon">⚠️</span>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         <span>Tambah Bencana</span>
       </a>
+
       <div class="nav-divider"><span>Rumah Ibadah</span></div>
       <a href="#ibadah" class="nav-item" data-page="ibadah">
-        <span class="nav-icon">🕌</span>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21h16M5.5 18h13M6.5 18v-7M10 18v-7M14 18v-7M17.5 18v-7M3.5 11 12 4l8.5 7h-17z"/></svg>
         <span>Rumah Ibadah</span>
       </a>
       <a href="#tambah-ibadah" class="nav-item" data-page="tambah-ibadah">
-        <span class="nav-icon">🏛️</span>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         <span>Tambah Ibadah</span>
       </a>
+
+      <div class="nav-divider"><span>Administrasi</span></div>
       <a href="#logs" class="nav-item superadmin-only" data-page="logs">
-        <span class="nav-icon">📝</span>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h11a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7"/><path d="M7 3.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2"/><path d="M9.5 8.5h7M9.5 12h7M9.5 15.5h4.5"/></svg>
         <span>Log Aktivitas</span>
       </a>
       <a href="#users" class="nav-item superadmin-only" data-page="users">
-        <span class="nav-icon">👥</span>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M15.5 5.7a3.2 3.2 0 0 1 0 5.6M17.6 14.9c1.6.8 2.6 2.3 2.9 4.6"/></svg>
         <span>Kelola Admin</span>
       </a>
-      <a href="#fields" class="nav-item superadmin-only" data-page="fields">
-        <span class="nav-icon">⚙️</span>
-        <span>Kolom Form</span>
-      </a>
     </nav>
+
     <div class="sidebar-footer">
       <div class="user-info">
-        <div class="user-avatar" id="userAvatar">SA</div>
+        <div class="user-avatar" id="userAvatar">·</div>
         <div class="user-details">
-          <div class="user-name" id="userName">Loading...</div>
-          <div class="user-role" id="userRole">Loading...</div>
+          <div class="user-name" id="userName">Memuat…</div>
+          <div class="user-role" id="userRole">—</div>
         </div>
       </div>
-      <button class="btn btn-logout" id="logoutBtn">Keluar</button>
+      <button class="btn-logout" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="icon"><path d="M14.5 8V5.5a2 2 0 0 0-2-2h-6a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V16"/><path d="M9.5 12h11M17.5 8.5 21 12l-3.5 3.5"/></svg>
+        <span>Keluar</span>
+      </button>
     </div>
   </aside>
 
-  <!-- Main Content -->
+  <!-- Konten utama -->
   <main class="main-content">
     <header class="top-bar">
-      <button class="menu-toggle" id="menuToggle">☰</button>
+      <button class="menu-toggle" id="menuToggle" aria-label="Buka menu">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
       <h1 class="page-title" id="pageTitle">Dashboard</h1>
       <div class="top-bar-actions">
-        <button class="btn btn-sm" id="changePasswordBtn">Ganti Password</button>
+        <button class="btn btn-secondary btn-sm" id="changePasswordBtn">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="14.5" r="4"/><path d="M10.9 11.6 20 3M15.5 7.5l3 3M18 5l3 3"/></svg>
+          <span class="btn-label">Ganti Password</span>
+        </button>
       </div>
     </header>
 
-    <!-- Page Container -->
     <div class="page-container" id="pageContainer">
-      <!-- Pages will be dynamically loaded here -->
+      <!-- Halaman dimuat dinamis di sini -->
     </div>
   </main>
 
-  <!-- Modal Container -->
+  <!-- Modal & Toast -->
   <div id="modalContainer"></div>
-
-  <!-- Toast Container -->
   <div id="toastContainer" class="toast-container"></div>
 
   <script src="/vendor/leaflet/leaflet.js"></script>
+  <script src="/js/icons.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/app.js"></script>
   <script src="/js/uploader.js"></script>

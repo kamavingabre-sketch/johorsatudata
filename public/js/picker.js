@@ -6,23 +6,23 @@
 const LocationPicker = (() => {
   const DEFAULT_CENTER = [3.5786, 98.6373];
 
-  function pin(color, emoji) {
+  function pin(color, glyph) {
     return L.divIcon({
       className: 'custom-marker-wrapper',
-      html: `<div class="custom-marker" style="background:${color}"><span>${emoji}</span></div>`,
-      iconSize: [36, 36], iconAnchor: [18, 36],
+      html: `<div class="custom-marker" style="background:${color}"><span class="pin-icon">${Icon.i(glyph || 'map-pin')}</span></div>`,
+      iconSize: [34, 34], iconAnchor: [17, 34],
     });
   }
 
   /**
    * root: elemen pembungkus yang berisi [data-role=map|lat|lng|display|gps|apply|status]
-   * opts: { lat, lng, color, emoji }
+   * opts: { lat, lng, color, glyph }
    */
   function mount(root, opts = {}) {
     const q = (r) => root.querySelector(`[data-role="${r}"]`);
     const mapEl = q('map'), latIn = q('lat'), lngIn = q('lng'), disp = q('display');
     const gpsBtn = q('gps'), applyBtn = q('apply'), status = q('status');
-    const color = opts.color || '#3b82f6', emoji = opts.emoji || '📍';
+    const color = opts.color || '#1a5c3e', glyph = opts.glyph || 'map-pin';
     const hasInit = Number.isFinite(opts.lat) && Number.isFinite(opts.lng);
 
     const map = L.map(mapEl).setView(hasInit ? [opts.lat, opts.lng] : DEFAULT_CENTER, hasInit ? 17 : 14);
@@ -32,7 +32,7 @@ const LocationPicker = (() => {
     const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: '&copy; Esri', maxZoom: 19,
     });
-    L.control.layers({ '🗺️ Peta': street, '🛰️ Satelit': sat }, null, { position: 'topright' }).addTo(map);
+    L.control.layers({ 'Peta Jalan': street, 'Citra Satelit': sat }, null, { position: 'topright' }).addTo(map);
 
     let marker = null;
     const show = (lat, lng) => { disp.textContent = `${(+lat).toFixed(6)}, ${(+lng).toFixed(6)}`; disp.classList.add('is-set'); };
@@ -41,7 +41,7 @@ const LocationPicker = (() => {
       const ll = L.latLng(lat, lng);
       if (marker) marker.setLatLng(ll);
       else {
-        marker = L.marker(ll, { draggable: true, icon: pin(color, emoji) }).addTo(map);
+        marker = L.marker(ll, { draggable: true, icon: pin(color, glyph) }).addTo(map);
         marker.on('dragend', () => {
           const p = marker.getLatLng();
           latIn.value = p.lat.toFixed(7); lngIn.value = p.lng.toFixed(7); show(p.lat, p.lng);
@@ -67,20 +67,20 @@ const LocationPicker = (() => {
     [latIn, lngIn].forEach((el) => el.addEventListener('change', () => fromInputs(false)));
 
     gpsBtn.addEventListener('click', () => {
-      if (!navigator.geolocation) { status.textContent = '⚠️ Browser tidak mendukung GPS.'; return; }
-      status.className = 'hint mt-1'; status.textContent = '⏳ Mengambil lokasi GPS…';
+      if (!navigator.geolocation) { status.textContent = 'Browser tidak mendukung GPS.'; return; }
+      status.className = 'hint mt-1'; status.textContent = 'Mengambil lokasi GPS…';
       gpsBtn.disabled = true;
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           setPoint(pos.coords.latitude, pos.coords.longitude, true);
           status.className = 'hint mt-1 text-success';
-          status.textContent = `✅ GPS ditemukan (akurasi ±${Math.round(pos.coords.accuracy)} m). Geser marker bila perlu.`;
+          status.textContent = `GPS ditemukan (akurasi ±${Math.round(pos.coords.accuracy)} m). Geser marker bila perlu.`;
           gpsBtn.disabled = false;
         },
         (err) => {
           status.className = 'hint mt-1 text-danger';
-          status.textContent = err.code === 1 ? '⚠️ Akses GPS ditolak. Izinkan lokasi di browser.'
-            : err.code === 2 ? '⚠️ Lokasi tidak tersedia. Pastikan GPS aktif.' : '⚠️ Waktu habis, coba lagi.';
+          status.textContent = err.code === 1 ? 'Akses GPS ditolak. Izinkan lokasi di browser.'
+            : err.code === 2 ? 'Lokasi tidak tersedia. Pastikan GPS aktif.' : 'Waktu habis, coba lagi.';
           gpsBtn.disabled = false;
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -100,7 +100,7 @@ const LocationPicker = (() => {
         <div class="location-picker">
           <div class="location-picker-map" data-role="map"></div>
           <div class="location-picker-info">
-            <span>📍</span>
+            ${Icon.i('map-pin')}
             <span data-role="display" class="${has ? 'is-set' : ''}">${has ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : 'Belum ada lokasi dipilih'}</span>
           </div>
         </div>
@@ -115,8 +115,8 @@ const LocationPicker = (() => {
           </div>
         </div>
         <div class="flex gap-1 mt-1 wrap">
-          <button type="button" class="btn btn-sm btn-outline" data-role="gps">📡 Gunakan GPS Saya</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-role="apply">📍 Terapkan Koordinat ke Peta</button>
+          <button type="button" class="btn btn-sm btn-outline" data-role="gps">${Icon.i('crosshair')} Gunakan GPS Saya</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-role="apply">${Icon.i('map-pin')} Terapkan Koordinat ke Peta</button>
         </div>
         <div class="hint mt-1" data-role="status"></div>
       </div>`;

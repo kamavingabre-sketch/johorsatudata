@@ -18,14 +18,12 @@ const Form = (() => {
       const data = await App.api(`/api/businesses/${id}`);
       await renderForm(container, data.business);
     } catch (e) {
-      container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><h3>Error</h3><p>${App.escapeHtml(e.message)}</p></div>`;
+      container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${Icon.i('alert-circle')}</div><h3>Error</h3><p>${App.escapeHtml(e.message)}</p></div>`;
     }
   }
 
   async function renderForm(container, business) {
     const meta = await App.fetchMeta();
-    const allFields = await App.fetchFields();
-    const customFields = allFields.filter(f => !f.isSystem && f.active);
     const isEdit = !!business;
 
     container.innerHTML = `
@@ -36,9 +34,9 @@ const Form = (() => {
         </div>
         <form id="businessForm" class="form-card-body" enctype="multipart/form-data">
           ${isEdit ? `<input type="hidden" name="id" value="${business.id}">` : ''}
-          
+
           <div class="form-section">
-            <div class="form-section-title">Informasi Usaha</div>
+            <div class="form-section-title">${Icon.i('store')} Informasi Usaha</div>
             <div class="form-row">
               <div class="form-group">
                 <label>Nama Usaha <span class="required">*</span></label>
@@ -56,7 +54,7 @@ const Form = (() => {
               <label>Kategori Usaha <span class="required">*</span></label>
               <select name="kategori_usaha" required>
                 <option value="">-- Pilih --</option>
-                ${meta.enums.kategori.map(k => `<option value="${k}" ${isEdit && business.kategori_usaha === k ? 'selected' : ''}>${App.kategoriIcon(k)} ${k}</option>`).join('')}
+                ${meta.enums.kategori.map(k => `<option value="${k}" ${isEdit && business.kategori_usaha === k ? 'selected' : ''}>${k}</option>`).join('')}
               </select>
             </div>
             <div class="form-row">
@@ -78,7 +76,7 @@ const Form = (() => {
           </div>
 
           <div class="form-section">
-            <div class="form-section-title">Izin & Keselamatan</div>
+            <div class="form-section-title">${Icon.i('shield')} Izin &amp; Keselamatan</div>
             <div class="form-row">
               <div class="form-group">
                 <label>Izin Usaha <span class="required">*</span></label>
@@ -108,7 +106,7 @@ const Form = (() => {
           </div>
 
           <div class="form-section">
-            <div class="form-section-title">Penanggung Jawab</div>
+            <div class="form-section-title">${Icon.i('user')} Penanggung Jawab</div>
             <div class="form-row">
               <div class="form-group">
                 <label>Nama Penanggung Jawab <span class="required">*</span></label>
@@ -121,15 +119,8 @@ const Form = (() => {
             </div>
           </div>
 
-          ${customFields.length ? `
           <div class="form-section">
-            <div class="form-section-title">Informasi Tambahan</div>
-            ${customFields.map(f => renderCustomField(f, business)).join('')}
-          </div>
-          ` : ''}
-
-          <div class="form-section">
-            <div class="form-section-title">Foto & Lokasi</div>
+            <div class="form-section-title">${Icon.i('camera')} Foto &amp; Lokasi</div>
             <div class="form-group">
               <label>Foto Usaha <span class="required">*</span></label>
               ${isEdit && business.foto_usaha ? `<div class="photo-preview"><img src="${business.foto_usaha}"></div>` : ''}
@@ -147,7 +138,7 @@ const Form = (() => {
             </div>
             <div class="form-group">
               <label>Alamat / Lokasi Usaha <span class="required">*</span></label>
-              <textarea name="alamat" required placeholder="Alamat lengkap usaha...">${isEdit ? App.escapeHtml(business.alamat) : ''}</textarea>
+              <textarea name="alamat" required placeholder="Alamat lengkap usaha…">${isEdit ? App.escapeHtml(business.alamat) : ''}</textarea>
             </div>
             <div class="form-group">
               <label>Lokasi di Peta <span class="required">*</span></label>
@@ -155,7 +146,7 @@ const Form = (() => {
               <div class="location-picker">
                 <div class="location-picker-map" id="formMap"></div>
                 <div class="location-picker-info">
-                  <span>📍</span>
+                  ${Icon.i('map-pin')}
                   <span id="coordDisplay">${isEdit && business.lat ? `${business.lat.toFixed(6)}, ${business.lng.toFixed(6)}` : 'Belum ada lokasi dipilih'}</span>
                 </div>
               </div>
@@ -169,20 +160,20 @@ const Form = (() => {
                   <input type="number" step="any" name="lng" id="lngInput" value="${isEdit ? business.lng || '' : ''}" placeholder="Contoh: 98.6373" required>
                 </div>
               </div>
-              <div class="flex gap-1 mt-1">
-                <button type="button" class="btn btn-sm btn-outline" id="gpsBtn">📡 Gunakan GPS Saya</button>
-                <button type="button" class="btn btn-sm btn-secondary" id="applyCoordBtn">📍 Terapkan Koordinat ke Peta</button>
+              <div class="flex gap-1 mt-1 wrap">
+                <button type="button" class="btn btn-sm btn-outline" id="gpsBtn">${Icon.i('crosshair')} Gunakan GPS Saya</button>
+                <button type="button" class="btn btn-sm btn-secondary" id="applyCoordBtn">${Icon.i('map-pin')} Terapkan Koordinat ke Peta</button>
               </div>
               <div class="hint mt-1" id="gpsStatus"></div>
             </div>
           </div>
 
           <div class="form-error" id="formError"></div>
-          <div class="flex gap-1" style="justify-content:flex-end;">
-            <button type="button" class="btn btn-secondary" onclick="window.location.hash='${isEdit ? 'detail/' + business.id : 'data'}'">Batal</button>
-            <button type="submit" class="btn btn-primary" id="submitBtn">
-              <span class="btn-text">${isEdit ? 'Simpan Perubahan' : 'Simpan Data'}</span>
-              <span class="btn-loader" style="display:none">Menyimpan...</span>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="window.location.hash='${isEdit ? `detail/${business.id}` : 'data'}'">Batal</button>
+            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+              <span class="btn-text">${Icon.i('check')} Simpan Data</span>
+              <span class="btn-loader" style="display:none"><span class="spinner-inline"></span> Menyimpan…</span>
             </button>
           </div>
         </form>
@@ -190,55 +181,7 @@ const Form = (() => {
     `;
 
     setupFormHandlers(isEdit);
-    initFormMap(isEdit ? business : null);
-  }
-
-  function renderCustomField(f, business) {
-    const val = business?.extra?.[`f${f.id}`] || '';
-    const req = f.required ? '<span class="required">*</span>' : '';
-    switch (f.type) {
-      case 'select':
-        return `
-          <div class="form-group">
-            <label>${App.escapeHtml(f.label)} ${req}</label>
-            <select name="extra[f${f.id}]" ${f.required ? 'required' : ''}>
-              <option value="">-- Pilih --</option>
-              ${(f.options || []).map(o => `<option value="${App.escapeHtml(o)}" ${val === o ? 'selected' : ''}>${App.escapeHtml(o)}</option>`).join('')}
-            </select>
-          </div>
-        `;
-      case 'yesno':
-        return `
-          <div class="form-group">
-            <label>${App.escapeHtml(f.label)} ${req}</label>
-            <div class="yesno-group">
-              <input type="radio" name="extra[f${f.id}]" id="f${f.id}_ya" value="ya" ${val === 'ya' ? 'checked' : ''}>
-              <label for="f${f.id}_ya">Ya</label>
-              <input type="radio" name="extra[f${f.id}]" id="f${f.id}_tidak" value="tidak" ${val === 'tidak' ? 'checked' : ''}>
-              <label for="f${f.id}_tidak">Tidak</label>
-            </div>
-          </div>
-        `;
-      case 'photo':
-        return `
-          <div class="form-group">
-            <label>${App.escapeHtml(f.label)} ${req}</label>
-            ${val ? `<div class="photo-preview"><img src="${val}"><label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="hapus_f${f.id}" value="1"> Hapus</label></div>` : ''}
-            <div class="file-upload">
-              <input type="file" name="f${f.id}" accept="image/jpeg,image/png,image/webp">
-              <div class="file-upload-text">Klik untuk unggah foto<br><small>JPG, PNG, WEBP (maks 8 MB)</small></div>
-            </div>
-          </div>
-        `;
-      case 'date':
-        return `<div class="form-group"><label>${App.escapeHtml(f.label)} ${req}</label><input type="date" name="extra[f${f.id}]" value="${val}" ${f.required ? 'required' : ''}></div>`;
-      case 'number':
-        return `<div class="form-group"><label>${App.escapeHtml(f.label)} ${req}</label><input type="number" name="extra[f${f.id}]" value="${val}" ${f.required ? 'required' : ''} step="any"></div>`;
-      case 'phone':
-        return `<div class="form-group"><label>${App.escapeHtml(f.label)} ${req}</label><input type="tel" name="extra[f${f.id}]" value="${val}" ${f.required ? 'required' : ''} placeholder="08xxxxxxxxxx"></div>`;
-      default:
-        return `<div class="form-group"><label>${App.escapeHtml(f.label)} ${req}</label><input type="text" name="extra[f${f.id}]" value="${App.escapeHtml(val)}" ${f.required ? 'required' : ''}></div>`;
-    }
+    initFormMap(business);
   }
 
   function setupFormHandlers(isEdit) {
@@ -288,11 +231,11 @@ const Form = (() => {
     // Tombol: Gunakan GPS perangkat
     document.getElementById('gpsBtn').addEventListener('click', () => {
       if (!navigator.geolocation) {
-        gpsStatus.textContent = '⚠️ Browser Anda tidak mendukung GPS.';
+        gpsStatus.textContent = 'Browser Anda tidak mendukung GPS.';
         gpsStatus.classList.add('text-danger');
         return;
       }
-      gpsStatus.textContent = '⏳ Mengambil lokasi GPS...';
+      gpsStatus.textContent = 'Mengambil lokasi GPS…';
       gpsStatus.classList.remove('text-danger', 'text-success');
       document.getElementById('gpsBtn').disabled = true;
 
@@ -305,7 +248,7 @@ const Form = (() => {
           lngInput.value = lng;
           syncManualToDisplay();
           if (window._formSetLocation) window._formSetLocation(lat, lng);
-          gpsStatus.textContent = `✅ Lokasi GPS ditemukan (akurasi ±${Math.round(accuracy)} meter).`;
+          gpsStatus.textContent = `Lokasi GPS ditemukan (akurasi ±${Math.round(accuracy)} meter).`;
           gpsStatus.classList.remove('text-danger');
           gpsStatus.classList.add('text-success');
           document.getElementById('gpsBtn').disabled = false;
@@ -313,9 +256,9 @@ const Form = (() => {
         },
         (err) => {
           let msg = 'Gagal mengambil GPS.';
-          if (err.code === 1) msg = '⚠️ Akses GPS ditolak. Izinkan akses lokasi di browser Anda.';
-          else if (err.code === 2) msg = '⚠️ Lokasi tidak tersedia. Pastikan GPS aktif.';
-          else if (err.code === 3) msg = '⚠️ Waktu habis. Coba lagi.';
+          if (err.code === 1) msg = 'Akses GPS ditolak. Izinkan akses lokasi di browser Anda.';
+          else if (err.code === 2) msg = 'Lokasi tidak tersedia. Pastikan GPS aktif.';
+          else if (err.code === 3) msg = 'Waktu habis. Coba lagi.';
           gpsStatus.textContent = msg;
           gpsStatus.classList.remove('text-success');
           gpsStatus.classList.add('text-danger');
@@ -333,18 +276,11 @@ const Form = (() => {
       const btnLoader = submitBtn.querySelector('.btn-loader');
       submitBtn.disabled = true;
       btnText.style.display = 'none';
-      btnLoader.style.display = 'inline';
+      btnLoader.style.display = 'inline-flex';
 
       try {
         const fd = new FormData(form);
-        const extra = {};
-        for (const [key, val] of fd.entries()) {
-          if (key.startsWith('extra[')) {
-            const fieldKey = key.replace('extra[', '').replace(']', '');
-            extra[fieldKey] = val;
-          }
-        }
-        
+
         const body = {
           nama_usaha: fd.get('nama_usaha'),
           jenis_kepemilikan: fd.get('jenis_kepemilikan'),
@@ -359,7 +295,7 @@ const Form = (() => {
           kelurahan: fd.get('kelurahan'),
           lat: fd.get('lat'),
           lng: fd.get('lng'),
-          extra: JSON.stringify(extra),
+          extra: '{}',
         };
 
         if (fd.get('hapus_izin_foto')) body.hapus_izin_foto = '1';
@@ -373,14 +309,10 @@ const Form = (() => {
         for (const input of form.querySelectorAll('input[type="file"]')) {
           if (input.files[0]) formData.append(input.name, input.files[0]);
         }
-        // Append delete flags for custom photos
-        for (const input of form.querySelectorAll('input[name^="hapus_"]')) {
-          if (input.checked) formData.append(input.name, input.value);
-        }
 
         const url = isEdit ? `/api/businesses/${editingId}` : '/api/businesses';
         const method = isEdit ? 'PUT' : 'POST';
-        
+
         const res = await fetch(url, { method, body: formData });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Gagal menyimpan');
@@ -400,14 +332,13 @@ const Form = (() => {
   function initFormMap(business) {
     const center = business && business.lat ? [business.lat, business.lng] : [3.5786, 98.6373];
     const zoom = business && business.lat ? 16 : 14;
-    
+
     map = L.map('formMap').setView(center, zoom);
 
     // OpenStreetMap - 100% gratis, tanpa API key
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 19,
-      className: 'osm-tiles'
     }).addTo(map);
 
     const latInput = document.getElementById('latInput');
@@ -430,6 +361,7 @@ const Form = (() => {
       latInput.value = lat;
       lngInput.value = lng;
       coordDisplay.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      coordDisplay.classList.add('is-set');
       if (panTo) map.setView(ll, Math.max(map.getZoom(), 15));
     }
 

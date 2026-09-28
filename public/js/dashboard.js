@@ -12,7 +12,7 @@ const Dashboard = (() => {
       return;
     }
     document.getElementById('loadingOverlay').classList.add('hidden');
-    
+
     // Set user info
     document.getElementById('userName').textContent = user.nama;
     document.getElementById('userRole').textContent = user.role;
@@ -23,18 +23,15 @@ const Dashboard = (() => {
       document.querySelectorAll('.superadmin-only').forEach(el => el.classList.add('hidden'));
     }
 
-    // Setup navigation
     setupNavigation();
     setupLogout();
-    setupMenuToggle();
+    setupSidebar();
     setupChangePassword();
 
-    // Check if must reset password
     if (user.mustReset) {
       showChangePasswordModal(true);
     }
 
-    // Load initial page
     const hash = window.location.hash.slice(1) || 'dashboard';
     navigateTo(hash);
   }
@@ -53,15 +50,22 @@ const Dashboard = (() => {
     });
   }
 
+  function setupSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    const open = () => { sidebar.classList.add('open'); backdrop.classList.add('show'); document.body.style.overflow = 'hidden'; };
+    const close = () => { sidebar.classList.remove('open'); backdrop.classList.remove('show'); document.body.style.overflow = ''; };
+
+    document.getElementById('menuToggle').addEventListener('click', open);
+    document.getElementById('sidebarClose').addEventListener('click', close);
+    backdrop.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    window._closeSidebar = close;
+  }
+
   function setupLogout() {
     document.getElementById('logoutBtn').addEventListener('click', () => {
       Modal.confirm('Keluar', 'Apakah Anda yakin ingin keluar?', () => Auth.logout());
-    });
-  }
-
-  function setupMenuToggle() {
-    document.getElementById('menuToggle').addEventListener('click', () => {
-      document.getElementById('sidebar').classList.toggle('open');
     });
   }
 
@@ -76,21 +80,21 @@ const Dashboard = (() => {
       <form id="changePasswordForm">
         <div class="form-group">
           <label>Password Lama</label>
-          <input type="password" name="current" required>
+          <input type="password" name="current" required autocomplete="current-password">
         </div>
         <div class="form-group">
           <label>Password Baru (minimal 8 karakter)</label>
-          <input type="password" name="next" required minlength="8">
+          <input type="password" name="next" required minlength="8" autocomplete="new-password">
         </div>
         <div class="form-group">
           <label>Konfirmasi Password Baru</label>
-          <input type="password" name="confirm" required minlength="8">
+          <input type="password" name="confirm" required minlength="8" autocomplete="new-password">
         </div>
         <div class="form-error" id="cpError"></div>
         ${mustReset ? '<p class="text-muted mb-2">Anda wajib mengubah password sebelum melanjutkan.</p>' : ''}
       </form>
     `;
-    const overlay = Modal.open(html, {
+    Modal.open(html, {
       title: 'Ganti Password',
       footer: `
         ${!mustReset ? '<button class="btn btn-secondary" onclick="Modal.close()">Batal</button>' : ''}
@@ -149,10 +153,6 @@ const Dashboard = (() => {
         title.textContent = 'Kelola Admin';
         if (Auth.isSuperadmin()) await Admin.renderUsers(container);
         break;
-      case 'fields':
-        title.textContent = 'Kelola Kolom Form';
-        if (Auth.isSuperadmin()) await Admin.renderFields(container);
-        break;
       case 'bencana':
         title.textContent = 'Titik Rawan Bencana';
         await Disaster.renderList(container);
@@ -194,132 +194,92 @@ const Dashboard = (() => {
           const id = page.split('/')[1];
           title.textContent = 'Detail Rumah Ibadah';
           await Worship.renderDetail(container, id);
+        } else {
+          // Halaman tidak dikenal (mis. bookmark lama) → kembali ke dashboard
+          window.location.hash = 'dashboard';
+          return;
         }
     }
-    // Close sidebar on mobile
-    document.getElementById('sidebar').classList.remove('open');
+    if (window._closeSidebar) window._closeSidebar();
   }
 
+  /* ---------------- Dashboard ringkasan ---------------- */
+
   async function renderDashboard(container) {
-    container.innerHTML = '<div class="loading">Memuat...</div>';
+    container.innerHTML = '<div class="loading">Memuat…</div>';
     try {
       const data = await App.api('/api/stats');
       container.innerHTML = `
         <div class="stats-grid">
-          <div class="stat-box">
-            <div class="stat-box-icon blue">🏪</div>
-            <div class="stat-box-info">
-              <h3>${data.totals.total}</h3>
-              <p>Total Usaha</p>
-            </div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-icon green">✅</div>
-            <div class="stat-box-info">
-              <h3>${data.totals.izin}</h3>
-              <p>Usaha Berizin</p>
-            </div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-icon orange">🛡️</div>
-            <div class="stat-box-info">
-              <h3>${data.totals.aman_lengkap}</h3>
-              <p>Kelengkapan Aman</p>
-            </div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-icon purple">📅</div>
-            <div class="stat-box-info">
-              <h3>${data.totals.bulan_ini}</h3>
-              <p>Ditambahkan Bulan Ini</p>
-            </div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-icon blue">👤</div>
-            <div class="stat-box-info">
-              <h3>${data.mine}</h3>
-              <p>Data Saya</p>
-            </div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-icon orange">🌊</div>
-            <div class="stat-box-info">
-              <h3>${data.disasterTotals.total}</h3>
-              <p>Titik Rawan Bencana</p>
-            </div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-icon purple">🕌</div>
-            <div class="stat-box-info">
-              <h3>${data.worshipTotals.total}</h3>
-              <p>Rumah Ibadah</p>
-            </div>
-          </div>
+          ${statBox('store', 'blue', data.totals.total, 'Total Usaha')}
+          ${statBox('badge', 'green', data.totals.izin, 'Usaha Berizin')}
+          ${statBox('shield', 'orange', data.totals.aman_lengkap, 'Kelengkapan Aman')}
+          ${statBox('calendar', 'purple', data.totals.bulan_ini, 'Ditambahkan Bulan Ini')}
+          ${statBox('user', 'blue', data.mine, 'Data Saya')}
+          ${statBox('waves', 'orange', data.disasterTotals.total, 'Titik Rawan Bencana')}
+          ${statBox('landmark', 'purple', data.worshipTotals.total, 'Rumah Ibadah')}
         </div>
 
         <div class="dashboard-grid">
           <div class="dashboard-card">
             <div class="card-header"><h3>Per Kategori Usaha</h3></div>
-            <div class="card-body">
-              ${renderChart(data.byKategori, 'kategori_usaha')}
-            </div>
+            <div class="card-body">${renderChart(data.byKategori, 'kategori_usaha')}</div>
           </div>
           <div class="dashboard-card">
             <div class="card-header"><h3>Per Jenis Kepemilikan</h3></div>
-            <div class="card-body">
-              ${renderChart(data.byJenis, 'jenis_kepemilikan')}
-            </div>
+            <div class="card-body">${renderChart(data.byJenis, 'jenis_kepemilikan')}</div>
           </div>
           <div class="dashboard-card">
             <div class="card-header"><h3>Per Skala Usaha</h3></div>
-            <div class="card-body">
-              ${renderChart(data.bySkala, 'skala_usaha')}
-            </div>
+            <div class="card-body">${renderChart(data.bySkala, 'skala_usaha')}</div>
           </div>
           <div class="dashboard-card">
             <div class="card-header"><h3>Per Jumlah Pekerja</h3></div>
-            <div class="card-body">
-              ${renderChart(data.byPekerja, 'jumlah_pekerja')}
-            </div>
+            <div class="card-body">${renderChart(data.byPekerja, 'jumlah_pekerja')}</div>
           </div>
           <div class="dashboard-card">
             <div class="card-header"><h3>Jenis Bencana</h3></div>
-            <div class="card-body">
-              ${renderChart(data.byBencana, 'jenis_bencana')}
-            </div>
+            <div class="card-body">${renderChart(data.byBencana, 'jenis_bencana')}</div>
           </div>
           <div class="dashboard-card">
             <div class="card-header"><h3>Rumah Ibadah per Agama</h3></div>
-            <div class="card-body">
-              ${renderChart(data.byIbadah, 'agama')}
-            </div>
+            <div class="card-body">${renderChart(data.byIbadah, 'agama')}</div>
           </div>
           <div class="dashboard-card">
             <div class="card-header"><h3>Kelengkapan Keselamatan</h3></div>
-            <div class="card-body">
-              ${renderChart(data.byKeamanan, 'kelengkapan_keamanan')}
-            </div>
+            <div class="card-body">${renderChart(data.byKeamanan, 'kelengkapan_keamanan')}</div>
           </div>
           <div class="dashboard-card">
             <div class="card-header"><h3>Aktivitas Terbaru</h3></div>
-            <div class="card-body">
-              ${renderLogsList(data.recentLogs)}
-            </div>
+            <div class="card-body">${renderLogsList(data.recentLogs)}</div>
           </div>
           <div class="dashboard-card full-width">
             <div class="card-header">
               <h3>Data Terbaru</h3>
               <a href="#data" class="btn btn-sm btn-outline">Lihat Semua</a>
             </div>
-            <div class="card-body">
-              ${renderRecentCards(data.recent)}
-            </div>
+            <div class="card-body">${renderRecentCards(data.recent)}</div>
           </div>
         </div>
       `;
     } catch (e) {
-      container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><h3>Error</h3><p>${App.escapeHtml(e.message)}</p></div>`;
+      container.innerHTML = errorState(e.message);
     }
+  }
+
+  function statBox(icon, color, value, label) {
+    return `
+      <div class="stat-box">
+        <div class="stat-box-icon ${color}">${Icon.i(icon)}</div>
+        <div class="stat-box-info">
+          <h3>${value}</h3>
+          <p>${label}</p>
+        </div>
+      </div>`;
+  }
+
+  function errorState(msg) {
+    return `<div class="empty-state"><div class="empty-state-icon">${Icon.i('alert-circle')}</div><h3>Terjadi Kesalahan</h3><p>${App.escapeHtml(msg)}</p></div>`;
   }
 
   function renderChart(items, key) {
@@ -327,35 +287,34 @@ const Dashboard = (() => {
     const max = Math.max(...items.map(i => i.count));
     return items.map(i => {
       const pct = max > 0 ? (i.count / max * 100) : 0;
+      const name = key === 'skala_usaha' ? App.label('SKALA_USAHA', i.name)
+        : key === 'jumlah_pekerja' ? App.label('JUMLAH_PEKERJA', i.name)
+        : App.escapeHtml(i.name);
       return `
-        <div style="margin-bottom:12px;">
-          <div class="flex-between mb-1">
-            <span style="font-size:0.85rem;font-weight:600;">${key === 'skala_usaha' ? App.label('SKALA_USAHA', i.name) : key === 'jumlah_pekerja' ? App.label('JUMLAH_PEKERJA', i.name) : App.escapeHtml(i.name)}</span>
-            <span style="font-size:0.85rem;color:var(--gray-600);">${i.count}</span>
+        <div class="bar-row">
+          <div class="bar-head">
+            <span class="bar-name">${name}</span>
+            <span class="bar-val">${i.count}</span>
           </div>
-          <div style="height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden;">
-            <div style="height:100%;width:${pct}%;background:var(--primary);border-radius:4px;transition:width 0.5s;"></div>
-          </div>
-        </div>
-      `;
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        </div>`;
     }).join('');
   }
 
   function renderLogsList(logs) {
     if (!logs.length) return '<p class="text-muted">Belum ada aktivitas.</p>';
+    const ICON_FOR = { create: 'plus', update: 'pencil', delete: 'trash', auth: 'key' };
     return logs.map(log => {
       const icon = log.action.includes('baru') ? 'create' : log.action.includes('ubah') ? 'update' : log.action.includes('hapus') ? 'delete' : 'auth';
-      const emoji = icon === 'create' ? '➕' : icon === 'update' ? '✏️' : icon === 'delete' ? '🗑️' : '🔐';
       return `
         <div class="log-item">
-          <div class="log-icon ${icon}">${emoji}</div>
+          <div class="log-icon ${icon}">${Icon.i(ICON_FOR[icon] || 'info')}</div>
           <div class="log-content">
             <strong>${App.escapeHtml(log.user_nama || log.username || 'Sistem')}</strong>
             <p>${App.escapeHtml(log.detail || log.action)}</p>
             <time>${App.formatDateTime(log.created_at)}</time>
           </div>
-        </div>
-      `;
+        </div>`;
     }).join('');
   }
 
@@ -364,6 +323,7 @@ const Dashboard = (() => {
     return `<div class="recent-grid">${items.map(i => `
       <div class="recent-card" onclick="window.location.hash='detail/${i.id}'">
         <div class="recent-card-img" style="${i.foto_usaha ? `background-image:url(${i.foto_usaha})` : ''}">
+          ${i.foto_usaha ? '' : Icon.i('store')}
           <div class="recent-card-badge">${App.escapeHtml(i.kategori_usaha)}</div>
         </div>
         <div class="recent-card-body">
@@ -374,16 +334,16 @@ const Dashboard = (() => {
             ${i.izin_usaha ? '<span class="tag tag-green">Berizin</span>' : '<span class="tag tag-red">Tanpa Izin</span>'}
           </div>
         </div>
-      </div>
-    `).join('')}</div>`;
+      </div>`).join('')}</div>`;
   }
+
+  /* ---------------- Daftar data usaha ---------------- */
 
   async function renderDataPage(container) {
     const meta = await App.fetchMeta();
-    const fields = await App.fetchFields();
     container.innerHTML = `
       <div class="data-toolbar">
-        <input type="text" class="search-input" id="searchInput" placeholder="Cari nama usaha, alamat, penanggung jawab...">
+        <input type="text" class="search-input" id="searchInput" placeholder="Cari nama usaha, alamat, penanggung jawab…">
         <select class="filter-select" id="filterKel">
           <option value="">Semua Kelurahan</option>
           ${(meta.enums.kelurahan || []).map(k => `<option value="${App.escapeHtml(k)}">${App.escapeHtml(k)}</option>`).join('')}
@@ -411,10 +371,10 @@ const Dashboard = (() => {
           <option value="0">Tanpa Izin</option>
         </select>
         ${Auth.isSuperadmin() ? '<button class="btn btn-outline btn-sm" id="filterMine">Hanya Data Saya</button>' : ''}
-        <a href="#tambah" class="btn btn-primary btn-sm">+ Tambah Data</a>
+        <a href="#tambah" class="btn btn-primary btn-sm">${Icon.i('plus')} Tambah Data</a>
       </div>
       <div id="dataTableContainer">
-        <div class="loading">Memuat...</div>
+        <div class="loading">Memuat…</div>
       </div>
     `;
 
@@ -441,7 +401,7 @@ const Dashboard = (() => {
 
       try {
         const data = await App.api(`/api/businesses?${params}`);
-        document.getElementById('dataTableContainer').innerHTML = renderTable(data, fields);
+        document.getElementById('dataTableContainer').innerHTML = renderTable(data);
       } catch (e) {
         document.getElementById('dataTableContainer').innerHTML = `<p class="text-danger">${App.escapeHtml(e.message)}</p>`;
       }
@@ -449,12 +409,9 @@ const Dashboard = (() => {
 
     const debouncedLoad = App.debounce(() => { page = 1; loadData(); }, 300);
     document.getElementById('searchInput').addEventListener('input', debouncedLoad);
-    document.getElementById('filterKategori').addEventListener('change', () => { page = 1; loadData(); });
-    document.getElementById('filterKel').addEventListener('change', () => { page = 1; loadData(); });
-    document.getElementById('filterJenis').addEventListener('change', () => { page = 1; loadData(); });
-    document.getElementById('filterSkala').addEventListener('change', () => { page = 1; loadData(); });
-    document.getElementById('filterPekerja').addEventListener('change', () => { page = 1; loadData(); });
-    document.getElementById('filterIzin').addEventListener('change', () => { page = 1; loadData(); });
+    ['filterKategori', 'filterKel', 'filterJenis', 'filterSkala', 'filterPekerja', 'filterIzin'].forEach(id => {
+      document.getElementById(id).addEventListener('change', () => { page = 1; loadData(); });
+    });
     const mineBtn = document.getElementById('filterMine');
     if (mineBtn) {
       mineBtn.addEventListener('click', () => {
@@ -472,56 +429,51 @@ const Dashboard = (() => {
     await loadData();
   }
 
-  function renderTable(data, fields) {
-    if (!data.rows.length) return `<div class="empty-state"><div class="empty-state-icon">📭</div><h3>Belum ada data</h3><p>Mulai tambahkan data usaha baru.</p></div>`;
-    
-    const customHeaders = fields.filter(f => !f.isSystem && f.active).slice(0, 3);
-    
+  function renderTable(data) {
+    if (!data.rows.length) {
+      return `<div class="empty-state"><div class="empty-state-icon">${Icon.i('inbox')}</div><h3>Belum ada data</h3><p>Mulai tambahkan data usaha baru.</p></div>`;
+    }
+
     let html = `<div class="data-table-wrap"><table class="data-table">
       <thead><tr>
         <th>Kode</th><th>Nama Usaha</th><th>Kelurahan</th><th>Kategori</th><th>Skala</th><th>Pekerja</th><th>Jenis</th>
-        <th>Izin</th><th>Keselamatan</th>
-        ${customHeaders.map(f => `<th>${App.escapeHtml(f.label)}</th>`).join('')}
-        <th>PIC</th><th>Alamat</th><th>Tanggal</th><th>Pendata</th><th>Aksi</th>
+        <th>Izin</th><th>Keselamatan</th><th>PIC</th><th>Alamat</th><th>Tanggal</th><th>Pendata</th><th>Aksi</th>
       </tr></thead><tbody>`;
 
     for (const r of data.rows) {
       const canEdit = Auth.isSuperadmin() || r.owner_id === user.id;
-      const extra = r.extra || {};
       html += `<tr>
-        <td><code>${App.escapeHtml(r.ref)}</code></td>
-        <td><a href="#detail/${r.id}"><strong>${App.escapeHtml(r.nama_usaha)}</strong></a></td>
-        <td>${r.kelurahan ? `<span class="tag tag-blue">${App.escapeHtml(r.kelurahan)}</span>` : '<span class="text-muted">-</span>'}</td>
-        <td><span class="tag">${App.kategoriIcon(r.kategori_usaha)} ${App.escapeHtml(r.kategori_usaha)}</span></td>
-        <td>${r.skala_usaha ? `<span class="tag">${App.label('SKALA_USAHA', r.skala_usaha)}</span>` : '<span class="text-muted">-</span>'}</td>
-        <td>${App.label('JUMLAH_PEKERJA', r.jumlah_pekerja)}</td>
-        <td>${App.escapeHtml(r.jenis_kepemilikan)}</td>
-        <td>${r.izin_usaha ? '<span class="tag tag-green">Ada</span>' : '<span class="tag tag-red">Tidak</span>'}</td>
-        <td>${renderKeamanan(r.kelengkapan_keamanan)}</td>
-        ${customHeaders.map(f => `<td>${App.escapeHtml(extra[`f${f.id}`] || '-')}</td>`).join('')}
-        <td>${App.escapeHtml(r.nama_pic)}</td>
-        <td title="${App.escapeHtml(r.alamat)}">${App.escapeHtml(r.alamat.substring(0, 30))}${r.alamat.length > 30 ? '...' : ''}</td>
-        <td>${App.formatDate(r.created_at)}</td>
-        <td><small>${App.escapeHtml(r.owner_nama || '-')}</small></td>
-        <td class="actions">
-          <button class="btn btn-sm btn-ghost" onclick="window.location.hash='detail/${r.id}'" title="Detail">👁️</button>
-          ${canEdit ? `<button class="btn btn-sm btn-ghost" onclick="window.location.hash='edit/${r.id}'" title="Edit">✏️</button>` : ''}
-          ${canEdit ? `<button class="btn btn-sm btn-ghost" onclick="Dashboard.deleteBusiness(${r.id},'${App.escapeHtml(r.nama_usaha)}')" title="Hapus">🗑️</button>` : ''}
+        <td data-label="Kode"><code>${App.escapeHtml(r.ref)}</code></td>
+        <td data-label="Nama Usaha"><a href="#detail/${r.id}">${App.escapeHtml(r.nama_usaha)}</a></td>
+        <td data-label="Kelurahan">${r.kelurahan ? `<span class="tag tag-blue">${App.escapeHtml(r.kelurahan)}</span>` : '<span class="text-muted">-</span>'}</td>
+        <td data-label="Kategori"><span class="tag">${Icon.i(Icon.kategori(r.kategori_usaha))} ${App.escapeHtml(r.kategori_usaha)}</span></td>
+        <td data-label="Skala">${r.skala_usaha ? `<span class="tag">${App.label('SKALA_USAHA', r.skala_usaha)}</span>` : '<span class="text-muted">-</span>'}</td>
+        <td data-label="Pekerja">${App.label('JUMLAH_PEKERJA', r.jumlah_pekerja)}</td>
+        <td data-label="Jenis">${App.escapeHtml(r.jenis_kepemilikan)}</td>
+        <td data-label="Izin">${r.izin_usaha ? '<span class="tag tag-green">Ada</span>' : '<span class="tag tag-red">Tidak</span>'}</td>
+        <td data-label="Keselamatan">${renderKeamanan(r.kelengkapan_keamanan)}</td>
+        <td data-label="Penanggung Jawab">${App.escapeHtml(r.nama_pic)}</td>
+        <td data-label="Alamat" title="${App.escapeHtml(r.alamat)}">${App.escapeHtml(r.alamat.substring(0, 30))}${r.alamat.length > 30 ? '…' : ''}</td>
+        <td data-label="Tanggal">${App.formatDate(r.created_at)}</td>
+        <td data-label="Pendata"><small>${App.escapeHtml(r.owner_nama || '-')}</small></td>
+        <td class="actions" data-label="Aksi">
+          <button class="btn-icon" onclick="window.location.hash='detail/${r.id}'" title="Detail" aria-label="Detail">${Icon.i('eye')}</button>
+          ${canEdit ? `<button class="btn-icon" onclick="window.location.hash='edit/${r.id}'" title="Edit" aria-label="Edit">${Icon.i('pencil')}</button>
+          <button class="btn-icon is-danger" onclick="Dashboard.deleteBusiness(${r.id},'${App.escapeHtml(r.nama_usaha)}')" title="Hapus" aria-label="Hapus">${Icon.i('trash')}</button>` : ''}
         </td>
       </tr>`;
     }
     html += '</tbody></table></div>';
 
-    // Pagination
     const totalPages = Math.ceil(data.total / data.per);
     if (totalPages > 1) {
       html += '<div class="pagination">';
-      html += `<button ${page <= 1 ? 'disabled' : ''} onclick="window._setPage(${data.page - 1})">‹ Prev</button>`;
+      html += `<button ${data.page <= 1 ? 'disabled' : ''} onclick="window._setPage(${data.page - 1})">‹ Sebelumnya</button>`;
       for (let i = 1; i <= totalPages && i <= 7; i++) {
         html += `<button class="${i === data.page ? 'active' : ''}" onclick="window._setPage(${i})">${i}</button>`;
       }
-      if (totalPages > 7) html += `<button disabled>... ${totalPages}</button>`;
-      html += `<button ${data.page >= totalPages ? 'disabled' : ''} onclick="window._setPage(${data.page + 1})">Next ›</button>`;
+      if (totalPages > 7) html += `<button disabled>… ${totalPages}</button>`;
+      html += `<button ${data.page >= totalPages ? 'disabled' : ''} onclick="window._setPage(${data.page + 1})">Berikutnya ›</button>`;
       html += '</div>';
     }
     return html;
@@ -533,43 +485,33 @@ const Dashboard = (() => {
     return '<span class="tag tag-red">Tidak Lengkap</span>';
   }
 
+  /* ---------------- Detail usaha ---------------- */
+
   async function renderDetail(container, id) {
-    container.innerHTML = '<div class="loading">Memuat...</div>';
+    container.innerHTML = '<div class="loading">Memuat…</div>';
     try {
       const data = await App.api(`/api/businesses/${id}`);
       const b = data.business;
-      const fields = await App.fetchFields();
-      const customFields = fields.filter(f => !f.isSystem && f.active);
       const canEdit = Auth.isSuperadmin() || b.owner_id === user.id;
-
-      let extraHtml = '';
-      for (const f of customFields) {
-        const val = b.extra?.[`f${f.id}`];
-        if (f.type === 'photo' && val) {
-          extraHtml += `<dt>${App.escapeHtml(f.label)}</dt><dd><img src="${val}" style="max-width:200px;border-radius:8px;"></dd>`;
-        } else if (val) {
-          extraHtml += `<dt>${App.escapeHtml(f.label)}</dt><dd>${App.escapeHtml(val)}</dd>`;
-        }
-      }
 
       container.innerHTML = `
         <div class="dashboard-card">
           <div class="card-header">
             <h3>${App.escapeHtml(b.ref)} — ${App.escapeHtml(b.nama_usaha)}</h3>
-            <div class="flex gap-1">
-              ${canEdit ? `<button class="btn btn-sm btn-primary" onclick="window.location.hash='edit/${b.id}'">✏️ Edit</button>` : ''}
-              <button class="btn btn-sm btn-secondary" onclick="window.location.hash='data'">← Kembali</button>
+            <div class="flex gap-1 wrap">
+              ${canEdit ? `<button class="btn btn-sm btn-primary" onclick="window.location.hash='edit/${b.id}'">${Icon.i('pencil')} Edit</button>` : ''}
+              <button class="btn btn-sm btn-secondary" onclick="window.location.hash='data'">${Icon.i('arrow-left')} Kembali</button>
             </div>
           </div>
           <div class="card-body">
             <div class="detail-grid">
               <div class="detail-images">
-                ${b.foto_usaha ? `<img src="${b.foto_usaha}" alt="Foto usaha">` : '<div class="empty-state" style="padding:20px"><p>Tidak ada foto</p></div>'}
-                ${b.izin_foto ? `<h4 class="mb-1">Dokumen Izin</h4><img src="${b.izin_foto}" alt="Izin usaha">` : ''}
+                ${b.foto_usaha ? `<figure><figcaption>Foto Usaha</figcaption><img src="${b.foto_usaha}" alt="Foto usaha"></figure>` : '<div class="no-photo">Tidak ada foto usaha</div>'}
+                ${b.izin_foto ? `<figure><figcaption>Dokumen Izin</figcaption><img src="${b.izin_foto}" alt="Izin usaha"></figure>` : ''}
               </div>
               <div class="detail-info">
                 <dl>
-                  <dt>Kategori</dt><dd>${App.kategoriIcon(b.kategori_usaha)} ${App.escapeHtml(b.kategori_usaha)}</dd>
+                  <dt>Kategori</dt><dd>${App.escapeHtml(b.kategori_usaha)}</dd>
                   <dt>Jenis Kepemilikan</dt><dd>${App.escapeHtml(b.jenis_kepemilikan)}</dd>
                   <dt>Skala Usaha</dt><dd>${b.skala_usaha ? `<span class="tag">${App.label('SKALA_USAHA', b.skala_usaha)}</span>` : '<span class="text-muted">Belum diisi</span>'}</dd>
                   <dt>Jumlah Pekerja</dt><dd>${b.jumlah_pekerja ? App.label('JUMLAH_PEKERJA', b.jumlah_pekerja) : '<span class="text-muted">Belum diisi</span>'}</dd>
@@ -583,14 +525,13 @@ const Dashboard = (() => {
                   <dt>Pendata</dt><dd>${App.escapeHtml(b.owner_nama || '-')} (${App.escapeHtml(b.owner_username || '')})</dd>
                   <dt>Dibuat</dt><dd>${App.formatDateTime(b.created_at)}</dd>
                   ${b.updated_at ? `<dt>Terakhir Diubah</dt><dd>${App.formatDateTime(b.updated_at)}</dd>` : ''}
-                  ${extraHtml}
                 </dl>
               </div>
             </div>
             ${b.lat && b.lng ? `
               <div class="mt-3">
                 <h4 class="mb-2">Lokasi di Peta</h4>
-                <div id="detailMap" style="height:300px;border-radius:var(--radius);overflow:hidden;"></div>
+                <div id="detailMap" class="detail-map"></div>
               </div>
             ` : ''}
           </div>
@@ -602,12 +543,11 @@ const Dashboard = (() => {
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
           maxZoom: 19,
-          className: 'osm-tiles'
         }).addTo(map);
         L.marker([b.lat, b.lng]).addTo(map).bindPopup(`<strong>${App.escapeHtml(b.nama_usaha)}</strong>`).openPopup();
       }
     } catch (e) {
-      container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><h3>Error</h3><p>${App.escapeHtml(e.message)}</p></div>`;
+      container.innerHTML = errorState(e.message);
     }
   }
 
@@ -627,13 +567,15 @@ const Dashboard = (() => {
     });
   }
 
+  /* ---------------- Log aktivitas ---------------- */
+
   async function renderLogsPage(container) {
     container.innerHTML = `
       <div class="data-toolbar">
-        <input type="text" class="search-input" id="logSearch" placeholder="Cari aktivitas...">
-        <a href="/api/logs/export" class="btn btn-sm btn-outline" target="_blank">📥 Export CSV</a>
+        <input type="text" class="search-input" id="logSearch" placeholder="Cari aktivitas…">
+        <a href="/api/logs/export" class="btn btn-sm btn-outline" target="_blank" rel="noopener">${Icon.i('download')} Export CSV</a>
       </div>
-      <div id="logsContainer"><div class="loading">Memuat...</div></div>
+      <div id="logsContainer"><div class="loading">Memuat…</div></div>
     `;
 
     let page = 1;
@@ -645,12 +587,12 @@ const Dashboard = (() => {
         const data = await App.api(`/api/logs?${params}`);
         const el = document.getElementById('logsContainer');
         if (!data.rows.length) {
-          el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📝</div><h3>Belum ada aktivitas</h3></div>';
+          el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${Icon.i('scroll')}</div><h3>Belum ada aktivitas</h3></div>`;
           return;
         }
         el.innerHTML = `<div class="dashboard-card"><div class="card-body">${renderLogsList(data.rows)}</div></div>`;
       } catch (e) {
-        document.getElementById('logsContainer').innerHTML = `<p class="text-danger">${e.message}</p>`;
+        document.getElementById('logsContainer').innerHTML = `<p class="text-danger">${App.escapeHtml(e.message)}</p>`;
       }
     }
 
@@ -659,7 +601,7 @@ const Dashboard = (() => {
   }
 
   async function renderMapPage(container) {
-    container.innerHTML = '<div class="loading">Memuat peta...</div>';
+    container.innerHTML = '<div class="loading">Memuat peta…</div>';
     await MapModule.mount(container);
   }
 

@@ -24,13 +24,13 @@ const Disaster = (() => {
     const meta = await App.fetchMeta();
     container.innerHTML = `
       <div class="data-toolbar">
-        <input type="text" class="search-input" id="disasterSearch" placeholder="🔍 Cari lokasi, alamat, penyebab, titik kumpul…">
+        <input type="text" class="search-input" id="disasterSearch" placeholder="Cari lokasi, alamat, penyebab, titik kumpul…">
         <select class="filter-select" id="disasterKel">
           <option value="">Semua Kelurahan</option>
           ${kelOptions(meta, '')}
           <option value="__kosong">— Belum diisi —</option>
         </select>
-        <a href="#tambah-bencana" class="btn btn-primary btn-sm">+ Tambah Bencana</a>
+        <a href="#tambah-bencana" class="btn btn-primary btn-sm">${Icon.i('plus')} Tambah Bencana</a>
       </div>
       <div id="disasterTableContainer"><div class="loading">Memuat...</div></div>
     `;
@@ -58,7 +58,7 @@ const Disaster = (() => {
 
   function renderTable(data) {
     if (!data.rows.length) {
-      return `<div class="empty-state"><div class="empty-state-icon">🌊</div><h3>Belum ada data bencana</h3><p>Tidak ada data yang cocok. Tambahkan titik rawan bencana baru.</p></div>`;
+      return `<div class="empty-state"><div class="empty-state-icon">${Icon.i('waves')}</div><h3>Belum ada data bencana</h3><p>Tidak ada data yang cocok. Tambahkan titik rawan bencana baru.</p></div>`;
     }
     let html = `<div class="data-table-wrap"><table class="data-table">
       <thead><tr>
@@ -75,7 +75,7 @@ const Disaster = (() => {
         <td>${r.kelurahan ? `<span class="tag tag-blue">${esc(r.kelurahan)}</span>` : '<span class="text-muted">-</span>'}</td>
         <td><span class="tag tag-orange">${esc(r.jenis_bencana)}</span></td>
         <td>${esc(r.penyebab)}</td>
-        <td>${hasTk ? `<span class="tag tag-green">🏕️ Ada koordinat</span>` : `<span class="tag tag-red">Belum lengkap</span>`}</td>
+        <td>${hasTk ? `<span class="tag tag-green">${Icon.i('check')} Ada koordinat</span>` : `<span class="tag tag-red">Belum lengkap</span>`}</td>
         <td><small>${esc(r.jumlah_rumah || '-')} rumah<br>${esc(r.jumlah_kk || '-')} KK</small></td>
         <td><small>${esc(r.owner_nama || '-')}</small></td>
         <td class="actions">
@@ -89,11 +89,11 @@ const Disaster = (() => {
     const totalPages = Math.ceil(data.total / data.per);
     if (totalPages > 1) {
       html += '<div class="pagination">';
-      html += `<button ${data.page <= 1 ? 'disabled' : ''} onclick="window._setDisasterPage(${data.page - 1})">‹ Prev</button>`;
+      html += `<button ${data.page <= 1 ? 'disabled' : ''} onclick="window._setDisasterPage(${data.page - 1})">‹ Sebelumnya</button>`;
       for (let i = 1; i <= Math.min(totalPages, 7); i++) {
         html += `<button class="${i === data.page ? 'active' : ''}" onclick="window._setDisasterPage(${i})">${i}</button>`;
       }
-      html += `<button ${data.page >= totalPages ? 'disabled' : ''} onclick="window._setDisasterPage(${data.page + 1})">Next ›</button></div>`;
+      html += `<button ${data.page >= totalPages ? 'disabled' : ''} onclick="window._setDisasterPage(${data.page + 1})">Berikutnya ›</button></div>`;
     }
     return html;
   }
@@ -114,7 +114,7 @@ const Disaster = (() => {
       try {
         d = (await App.api(`/api/disasters/${id}`)).disaster;
       } catch (e) {
-        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><h3>Error</h3><p>${esc(e.message)}</p></div>`;
+        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${Icon.i('alert-circle')}</div><h3>Terjadi Kesalahan</h3><p>${esc(e.message)}</p></div>`;
         return;
       }
     }
@@ -180,7 +180,7 @@ const Disaster = (() => {
               ${d && d.foto ? `<div class="photo-preview"><img src="${esc(d.foto)}" alt="Foto bencana"></div>` : ''}
               <div class="file-upload">
                 <input type="file" name="foto" accept="image/jpeg,image/png,image/webp">
-                <div class="file-upload-text">📷 Klik atau seret foto ke sini<br><small>JPG, PNG, WEBP — otomatis dikompres${isEdit ? ' · kosongkan jika tidak diubah' : ''}</small></div>
+                <div class="file-upload-text">Klik atau seret foto ke sini<br><small>JPG, PNG, WEBP — otomatis dikompres${isEdit ? ' · kosongkan jika tidak diubah' : ''}</small></div>
               </div>
             </div>
           </div>
@@ -196,7 +196,7 @@ const Disaster = (() => {
               ${d && d.titik_kumpul_foto ? `<div class="photo-preview"><img src="${esc(d.titik_kumpul_foto)}" alt="Foto titik kumpul"></div>` : ''}
               <div class="file-upload">
                 <input type="file" name="foto_titik_kumpul" accept="image/jpeg,image/png,image/webp" ${d && d.titik_kumpul_foto ? '' : 'required'}>
-                <div class="file-upload-text">📷 Klik untuk ambil / pilih foto titik kumpul<br><small>Wajib${isEdit && d.titik_kumpul_foto ? ' · kosongkan jika tidak diubah' : ''}</small></div>
+                <div class="file-upload-text">Klik untuk ambil / pilih foto titik kumpul<br><small>Wajib${isEdit && d.titik_kumpul_foto ? ' · kosongkan jika tidak diubah' : ''}</small></div>
               </div>
             </div>
             <div class="form-group">
@@ -232,10 +232,10 @@ const Disaster = (() => {
       </div>`;
 
     const p1 = LocationPicker.mount(container.querySelector('#pickGather'), {
-      lat: d ? d.titik_kumpul_lat : undefined, lng: d ? d.titik_kumpul_lng : undefined, color: '#10b981', emoji: '🏕️',
+      lat: d ? d.titik_kumpul_lat : undefined, lng: d ? d.titik_kumpul_lng : undefined, color: '#1e7d46', glyph: 'tent',
     });
     const p2 = LocationPicker.mount(container.querySelector('#pickDisaster'), {
-      lat: d ? d.lat : undefined, lng: d ? d.lng : undefined, color: '#ef4444', emoji: '🌊',
+      lat: d ? d.lat : undefined, lng: d ? d.lng : undefined, color: '#b23730', glyph: 'map-pin',
     });
     pickers = [p1, p2];
     setupSubmit(isEdit, id);
@@ -314,17 +314,17 @@ const Disaster = (() => {
           <div class="card-header">
             <h3>${esc(d.ref)} — ${esc(d.nama_lokasi)}</h3>
             <div class="flex gap-1">
-              ${canEdit ? `<button class="btn btn-sm btn-primary" onclick="window.location.hash='edit-bencana/${d.id}'">✏️ Edit</button>` : ''}
-              <button class="btn btn-sm btn-secondary" onclick="window.location.hash='bencana'">← Kembali</button>
+              ${canEdit ? `<button class="btn btn-sm btn-primary" onclick="window.location.hash='edit-bencana/${d.id}'">${Icon.i('pencil')} Edit</button>` : ''}
+              <button class="btn btn-sm btn-secondary" onclick="window.location.hash='bencana'">${Icon.i('arrow-left')} Kembali</button>
             </div>
           </div>
           <div class="card-body">
             <div class="detail-grid">
               <div class="detail-images">
-                <figure><figcaption>🌊 Foto Bencana</figcaption>
+                <figure><figcaption>Foto Bencana</figcaption>
                   ${d.foto ? `<img src="${esc(d.foto)}" alt="Foto bencana">` : '<div class="no-photo">Tidak ada foto</div>'}
                 </figure>
-                <figure><figcaption>🏕️ Foto Titik Kumpul</figcaption>
+                <figure><figcaption>Foto Titik Kumpul</figcaption>
                   ${d.titik_kumpul_foto ? `<img src="${esc(d.titik_kumpul_foto)}" alt="Foto titik kumpul">` : '<div class="no-photo">Belum ada foto — edit data untuk melengkapi</div>'}
                 </figure>
               </div>
@@ -358,18 +358,18 @@ const Disaster = (() => {
       if (hasTk || hasLoc) {
         const map = L.map('detailDisasterMap');
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(map);
-        const icon = (c, e) => L.divIcon({
+        const icon = (c, g) => L.divIcon({
           className: 'custom-marker-wrapper',
-          html: `<div class="custom-marker" style="background:${c}"><span>${e}</span></div>`,
-          iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -34],
+          html: `<div class="custom-marker" style="background:${c}"><span class="pin-icon">${Icon.i(g)}</span></div>`,
+          iconSize: [34, 34], iconAnchor: [17, 34], popupAnchor: [0, -32],
         });
         const pts = [];
-        if (hasLoc) { L.marker([d.lat, d.lng], { icon: icon('#ef4444', '🌊') }).addTo(map).bindPopup(`<strong>${esc(d.nama_lokasi)}</strong><br>Lokasi bencana`); pts.push([d.lat, d.lng]); }
-        if (hasTk) { L.marker([d.titik_kumpul_lat, d.titik_kumpul_lng], { icon: icon('#10b981', '🏕️') }).addTo(map).bindPopup(`<strong>Titik Kumpul</strong><br>${esc(d.titik_kumpul || '')}`); pts.push([d.titik_kumpul_lat, d.titik_kumpul_lng]); }
+        if (hasLoc) { L.marker([d.lat, d.lng], { icon: icon('#b23730', 'map-pin') }).addTo(map).bindPopup(`<strong>${esc(d.nama_lokasi)}</strong><br>Lokasi bencana`); pts.push([d.lat, d.lng]); }
+        if (hasTk) { L.marker([d.titik_kumpul_lat, d.titik_kumpul_lng], { icon: icon('#1e7d46', 'tent') }).addTo(map).bindPopup(`<strong>Titik Kumpul</strong><br>${esc(d.titik_kumpul || '')}`); pts.push([d.titik_kumpul_lat, d.titik_kumpul_lng]); }
         if (pts.length === 1) map.setView(pts[0], 17); else map.fitBounds(L.latLngBounds(pts), { padding: [50, 50], maxZoom: 17 });
       }
     } catch (e) {
-      container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><h3>Error</h3><p>${esc(e.message)}</p></div>`;
+      container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${Icon.i('alert-circle')}</div><h3>Terjadi Kesalahan</h3><p>${esc(e.message)}</p></div>`;
     }
   }
 

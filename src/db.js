@@ -285,10 +285,8 @@ async function init() {
   ]) {
     try { db.exec(sql); } catch {}
   }
-  // Kolom kustom lama "Kelurahan / Perumahan" dipertahankan tetapi diganti nama agar tidak rancu
-  try {
-    db.prepare("UPDATE fields SET label='Perumahan / Komplek' WHERE is_system=0 AND label='Kelurahan / Perumahan'").run();
-  } catch {}
+  // Pendaftaran mandiri dihentikan: semua akun otomatis disetujui (dibuat oleh Superadmin)
+  try { db.prepare("UPDATE users SET approval='approved' WHERE approval IS NOT 'approved'").run(); } catch {}
 
   // Indexes
   db.exec(`CREATE INDEX IF NOT EXISTS idx_biz_owner ON businesses(owner_id)`);
@@ -315,45 +313,6 @@ function seed() {
       'INSERT INTO users (username, nama, role, password_hash, must_reset) VALUES (?,?,?,?,1)'
     ).run('superadmin', 'Super Administrator', 'superadmin', hash);
     console.log('[seed] Akun superadmin dibuat -> username: superadmin, password sementara: Johor2026!');
-  }
-
-  const fieldCount = db.prepare('SELECT COUNT(*) c FROM fields').get().c;
-  if (fieldCount === 0) {
-    const sys = [
-      ['Nama Usaha', 'text', [], 1, 'nama_usaha'],
-      ['Jenis Kepemilikan Usaha', 'select', ENUMS.JENIS, 1, 'jenis_kepemilikan'],
-      ['Kategori Usaha', 'select', ENUMS.KATEGORI, 1, 'kategori_usaha'],
-      ['Skala Usaha', 'select', ENUMS.SKALA_USAHA, 1, 'skala_usaha'],
-      ['Jumlah Pekerja', 'select', ENUMS.JUMLAH_PEKERJA, 1, 'jumlah_pekerja'],
-      ['Izin Usaha', 'yesno', [], 1, 'izin_usaha'],
-      ['Nama Penanggung Jawab', 'text', [], 1, 'nama_pic'],
-      ['Nomor HP Penanggung Jawab', 'phone', [], 1, 'hp_pic'],
-      ['Kelengkapan Keselamatan', 'select', ENUMS.KEAMANAN, 1, 'kelengkapan_keamanan'],
-      ['Foto Usaha', 'photo', [], 1, 'foto_usaha'],
-      ['Lokasi Usaha', 'location', [], 1, 'lokasi_usaha'],
-    ];
-    const ins = db.prepare(
-      'INSERT INTO fields (label, type, options, required, is_system, system_key, sort) VALUES (?,?,?,?,1,?,?)'
-    );
-    sys.forEach((f, i) => ins.run(f[0], f[1], JSON.stringify(f[2]), f[3], f[4], i + 1));
-
-    db.prepare(
-      'INSERT INTO fields (label, type, options, required, is_system, sort) VALUES (?,?,?,0,0,?)'
-    ).run('Kelurahan / Perumahan', 'text', '[]', 10);
-  }
-
-  // Migrasi untuk database lama: pastikan field sistem baru ada (idempotent)
-  const ensureSys = [
-    ['Skala Usaha', 'select', ENUMS.SKALA_USAHA, 'skala_usaha', 3.1],
-    ['Jumlah Pekerja', 'select', ENUMS.JUMLAH_PEKERJA, 'jumlah_pekerja', 3.2],
-  ];
-  for (const [label, type, opts, key, sort] of ensureSys) {
-    const exists = db.prepare('SELECT id FROM fields WHERE system_key = ?').get(key);
-    if (!exists) {
-      db.prepare(
-        'INSERT INTO fields (label, type, options, required, is_system, system_key, sort) VALUES (?,?,?,1,1,?,?)'
-      ).run(label, type, JSON.stringify(opts), key, sort);
-    }
   }
 }
 

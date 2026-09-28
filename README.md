@@ -17,15 +17,14 @@ Platform pendataan usaha digital untuk Kecamatan Medan Johor dengan peta interak
 - **Izin & Keselamatan**: Status izin usaha + foto dokumen, kelengkapan keselamatan
 - **Penanggung Jawab**: Nama dan nomor HP
 - **Foto & Lokasi**: Upload foto usaha + pin lokasi di peta
-- **Kolom Dinamis**: Superadmin dapat menambah/menghapus kolom form tambahan
 
-### 🧾 Pendaftaran Akun Mandiri
-- Tab **Daftar Akun** di halaman login: nama, username, **Kelurahan** (Suka Maju, Titi Kuning, Kedai Durian, Pangkalan Masyhur, Gedung Johor, Kwala Bekala), **Jabatan** (ASN, LURAH, KEPLING), HP (opsional), password
-- Akun hasil pendaftaran berstatus **menunggu persetujuan**; Superadmin menyetujui/menolak di menu *Kelola Admin*
-- Pendaftar selalu berperan `admin` (tidak bisa menjadi superadmin lewat form)
+### 👥 Manajemen Akun (tanpa pendaftaran mandiri)
+- Tidak ada pendaftaran mandiri — akun petugas **hanya dibuat oleh Superadmin** melalui menu *Kelola Admin*
+- Akun yang dibuat Superadmin **langsung aktif** tanpa proses persetujuan
+- Superadmin mengatur nama, username, kelurahan tugas, jabatan, nomor HP, role, dan status aktif
 
 ### 🔐 Multi-Level Access
-- **Superadmin**: Akses penuh — CRUD semua data, kelola admin, lihat log aktivitas, kelola kolom form
+- **Superadmin**: Akses penuh — CRUD semua data, kelola admin, lihat log aktivitas
 - **Admin**: Input data, edit/hapus data sendiri, lihat semua data
 
 ### 📊 Dashboard & Laporan
@@ -258,19 +257,7 @@ sudo certbot --nginx -d your-domain.com
 2. Klik pin marker untuk melihat detail usaha
 3. Klik **Lihat Detail** untuk informasi lengkap
 
-### 5. Kelola Kolom Form (Superadmin)
-
-1. Klik **Kolom Form** di sidebar
-2. Klik **+ Tambah Kolom**
-3. Pilih tipe kolom:
-   - Teks, Angka, Tanggal
-   - Pilihan (Dropdown)
-   - Ya/Tidak
-   - Nomor Telepon
-   - Foto
-4. Kolom baru akan muncul di form pendataan
-
-### 6. Monitor Aktivitas
+### 5. Monitor Aktivitas
 
 1. Klik **Log Aktivitas** di sidebar
 2. Lihat siapa yang menambahkan, mengubah, atau menghapus data
@@ -385,7 +372,6 @@ pm2 restart johorsatudata
 
 ### Auth
 
-- `POST /api/auth/register` — Daftar akun baru (publik, menunggu persetujuan)
 - `POST /api/auth/login` — Login
 - `POST /api/auth/logout` — Logout
 - `GET /api/auth/me` — Get current user

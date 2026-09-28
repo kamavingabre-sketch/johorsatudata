@@ -4,20 +4,12 @@
 
 const App = (() => {
   let meta = null;
-  let customFields = [];
 
   async function fetchMeta() {
     if (meta) return meta;
     const res = await fetch('/api/meta');
     meta = await res.json();
     return meta;
-  }
-
-  async function fetchFields() {
-    const res = await fetch('/api/fields');
-    const data = await res.json();
-    customFields = (data.fields || []).filter(f => !f.isSystem && f.active);
-    return data.fields;
   }
 
   async function api(url, opts = {}) {
@@ -38,7 +30,6 @@ const App = (() => {
 
   function parseDate(d) {
     if (!d) return null;
-    // SQLite returns "YYYY-MM-DD HH:MM:SS" — replace space with T for ISO format
     const s = String(d);
     if (s.includes('T')) return new Date(s);
     if (s.includes(' ')) return new Date(s.replace(' ', 'T') + 'Z');
@@ -78,22 +69,7 @@ const App = (() => {
     return escapeHtml(l || value);
   }
 
-  function kategoriIcon(kat) {
-    const map = {
-      'PERDAGANGAN': '🛒',
-      'KULINER': '🍽️',
-      'JASA PERAWATAN KECANTIKAN': '💄',
-      'JASA PERBAIKAN DAN TEKNIK': '🔧',
-      'LAUNDRY DAN DOORSMEER': '👔',
-      'PRODUKSI DAN INDUSTRI RUMAH TANGGA': '🏭',
-      'PERTANIAN': '🌾',
-      'PERIKANAN': '🐟',
-      'PETERNAKAN': '🐄',
-    };
-    return map[kat] || '🏪';
-  }
-
-  return { fetchMeta, fetchFields, label, api, formatDate, formatDateTime, escapeHtml, debounce, initials, kategoriIcon, getMeta: () => meta, getFields: () => customFields };
+  return { fetchMeta, label, api, formatDate, formatDateTime, escapeHtml, debounce, initials, getMeta: () => meta };
 })();
 
 /* ========================================
@@ -101,16 +77,17 @@ const App = (() => {
    ======================================== */
 
 const Toast = (() => {
-  const container = () => document.getElementById('toastContainer');
+  const ICONS = { success: 'check-circle', error: 'x-circle', warning: 'alert-circle', info: 'info' };
 
   function show(msg, type = 'info', duration = 4000) {
     const el = document.createElement('div');
     el.className = `toast ${type}`;
-    el.textContent = msg;
-    container()?.appendChild(el);
+    el.innerHTML = `${Icon.i(ICONS[type] || 'info')}<span></span>`;
+    el.querySelector('span').textContent = msg;
+    const c = document.getElementById('toastContainer');
+    if (c) c.appendChild(el);
     setTimeout(() => {
-      el.style.opacity = '0';
-      el.style.transform = 'translateX(100px)';
+      el.classList.add('out');
       setTimeout(() => el.remove(), 300);
     }, duration);
   }
@@ -135,10 +112,10 @@ const Modal = (() => {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.innerHTML = `
-      <div class="modal ${opts.large ? 'modal-lg' : ''}">
+      <div class="modal ${opts.large ? 'modal-lg' : ''}" role="dialog" aria-modal="true">
         <div class="modal-header">
           <h3>${App.escapeHtml(opts.title || 'Dialog')}</h3>
-          <button class="modal-close">&times;</button>
+          <button class="modal-close" aria-label="Tutup">${Icon.i('x')}</button>
         </div>
         <div class="modal-body">${content}</div>
         ${opts.footer ? `<div class="modal-footer">${opts.footer}</div>` : ''}

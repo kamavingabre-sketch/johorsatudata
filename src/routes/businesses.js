@@ -239,74 +239,10 @@ function validateAndNormalize(body, filesExist) {
 }
 
 function validateCustomFields(body, files, mode, existingExtra) {
-  const errors = [];
+  // Fitur kolom tambahan sudah dihentikan dari form pendataan.
+  // Nilai kolom lama (sebelum fitur dihentikan) tetap disimpan apa adanya.
   const out = mode === 'update' ? { ...(existingExtra || {}) } : {};
-  const fields = activeCustomFields();
-  let incoming = {};
-  try {
-    incoming = body.extra ? JSON.parse(body.extra) : {};
-  } catch {
-    errors.push('Format data kolom tambahan tidak valid.');
-  }
-  for (const f of fields) {
-    const key = `f${f.id}`;
-    const type = f.type;
-    if (type === 'photo') {
-      const fileUrl = files && files[key] && files[key][0] ? uploadedPath({ files }, key) : null;
-      const removeFlag = body[`hapus_${key}`] === '1';
-      const current = out[key] || null;
-      if (fileUrl) {
-        if (current) removeStoredPhoto(current);
-        out[key] = fileUrl;
-      } else if (removeFlag) {
-        if (current) removeStoredPhoto(current);
-        delete out[key];
-      }
-      if (!out[key] && f.required && mode === 'create')
-        errors.push(`Kolom "${f.label}" wajib (unggah fotonya).`);
-      continue;
-    }
-    let v = incoming[key];
-    if (v === undefined || v === null) {
-      if (mode === 'update' && !Object.prototype.hasOwnProperty.call(incoming, key)) {
-        // biarkan nilai lama
-        continue;
-      }
-      v = '';
-    }
-    v = String(v).trim();
-    if (!v) {
-      if (f.required) errors.push(`Kolom "${f.label}" wajib diisi.`);
-      delete out[key];
-      continue;
-    }
-    if (type === 'number') {
-      if (!Number.isFinite(parseFloat(v))) errors.push(`Kolom "${f.label}" harus angka.`);
-      else v = String(parseFloat(v));
-    } else if (type === 'date') {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) errors.push(`Kolom "${f.label}" harus tanggal (YYYY-MM-DD).`);
-    } else if (type === 'select') {
-      const opts = parseOptions(f);
-      if (opts.length && !opts.includes(v.toUpperCase()) && !opts.includes(v)) {
-        const match = opts.find((o) => o.toUpperCase() === v.toUpperCase());
-        if (!match) errors.push(`Pilihan "${f.label}" tidak valid.`);
-        else v = match;
-      }
-    } else if (type === 'yesno') {
-      v = toBool(v) ? 'ya' : v === 'tidak' ? 'tidak' : '';
-      if (!v && f.required) errors.push(`Kolom "${f.label}" wajib diisi (Ya/Tidak).`);
-      if (!v) {
-        delete out[key];
-        continue;
-      }
-    } else if (type === 'phone') {
-      v = cleanPhone(v);
-    } else {
-      if (v.length > 2000) errors.push(`Kolom "${f.label}" maksimal 2000 karakter.`);
-    }
-    out[key] = v;
-  }
-  return { extra: out, errors };
+  return { extra: out, errors: [] };
 }
 
 router.post('/', requireAuth, uploadPhotos, (req, res) => {
@@ -453,7 +389,6 @@ router.put('/:id', requireAuth, uploadPhotos, (req, res) => {
   if (old.nama_pic !== data.nama_pic || old.hp_pic !== data.hp_pic) diffs.push('penanggung jawab');
   if ((old.kelurahan || '') !== data.kelurahan) diffs.push('kelurahan');
   if (old.alamat !== data.alamat || old.lat !== data.lat || old.lng !== data.lng) diffs.push('lokasi');
-  if (JSON.stringify(JSON.parse(old.extra || '{}')) !== JSON.stringify(cust.extra)) diffs.push('kolom tambahan');
 
   logAction({
     userId: req.user.sub,
