@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit-cover">
+  <meta name="theme-color" content="#103325">
+  <meta name="description" content="Data terbuka Kecamatan Medan Johor — usaha, bencana, rumah ibadah">
+  <title>Data Publik — JohorSatuData</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+  <style>
+    /* ---- Public page overrides ---- */
+    .pub-wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px 64px; }
+
+    .pub-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 24px 0 20px; border-bottom: 1px solid var(--line); margin-bottom: 28px; }
+    .pub-header .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit; }
+    .pub-header .brand svg { width: 38px; height: 38px; }
+    .pub-header .brand-name { font-size: 18px; font-weight: 730; color: var(--green-800); letter-spacing: -.02em; }
+    .pub-header .brand-sub { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+    .pub-header .header-right { display: flex; align-items: center; gap: 12px; }
+
+    /* Summary cards */
+    .pub-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .pub-stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 20px 22px; display: flex; align-items: center; gap: 16px; }
+    .pub-stat-icon { width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; }
+    .pub-stat-icon svg { width: 22px; height: 22px; }
+    .pub-stat-icon.green  { background: #e5f3ea; color: var(--success); }
+    .pub-stat-icon.orange { background: #faf0dc; color: var(--warning); }
+    .pub-stat-icon.purple { background: #ede5f5; color: #5e4187; }
+    .pub-stat-num { font-size: 28px; font-weight: 730; color: var(--ink); line-height: 1; }
+    .pub-stat-label { font-size: 13px; color: var(--ink-3); margin-top: 4px; }
+
+    /* Tabs */
+    .pub-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--line); margin-bottom: 24px; overflow-x: auto; }
+    .pub-tab { padding: 10px 22px; font-size: 14px; font-weight: 620; color: var(--ink-3); background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; white-space: nowrap; transition: color .15s, border-color .15s; }
+    .pub-tab:hover { color: var(--ink); }
+    .pub-tab.active { color: var(--green-700); border-bottom-color: var(--green-700); }
+    .pub-tab .tab-count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 20px; padding: 0 6px; margin-left: 7px; border-radius: 10px; background: var(--line); color: var(--ink-2); font-size: 11px; font-weight: 700; }
+    .pub-tab.active .tab-count { background: var(--green-100); color: var(--green-700); }
+
+    /* Toolbar */
+    .pub-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px; }
+    .pub-search { flex: 1; min-width: 220px; position: relative; }
+    .pub-search input { width: 100%; height: 40px; padding: 0 14px 0 38px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); font-size: 13.5px; color: var(--ink); outline: none; transition: border-color .15s, box-shadow .15s; }
+    .pub-search input:focus { border-color: var(--green-600); box-shadow: var(--accent-glow); }
+    .pub-search .search-ico { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-3); pointer-events: none; }
+    .pub-search .search-ico svg { width: 16px; height: 16px; }
+    .pub-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pub-filters select { height: 40px; padding: 0 32px 0 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237d8a81' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center; font-size: 13px; color: var(--ink); appearance: none; cursor: pointer; }
+
+    /* Cards grid */
+    .pub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
+    .pub-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; transition: box-shadow .18s, transform .18s; }
+    .pub-card:hover { box-shadow: var(--shadow-2); transform: translateY(-2px); }
+    .pub-card-img { height: 180px; background-size: cover; background-position: center; background-color: var(--surface-2); position: relative; }
+    .pub-card-img .badge { position: absolute; top: 12px; left: 12px; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; color: #fff; background: rgba(0,0,0,.55); backdrop-filter: blur(4px); }
+    .pub-card-body { padding: 16px 18px 18px; }
+    .pub-card-body h3 { font-size: 15px; font-weight: 680; color: var(--ink); margin: 0 0 6px; line-height: 1.35; }
+    .pub-card-body .card-meta { font-size: 12.5px; color: var(--ink-3); line-height: 1.6; }
+    .pub-card-body .card-meta svg { width: 13px; height: 13px; vertical-align: -2px; margin-right: 4px; color: var(--ink-3); }
+    .pub-card-body .card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 620; line-height: 1.7; background: var(--gray-200, #e8e7e0); color: var(--ink-2, #4d5a52); }
+    .tag-green  { background: var(--success-bg, #e5f3ea); color: var(--success, #1e7d46); }
+    .tag-red    { background: var(--danger-bg, #f9e7e5); color: var(--danger, #b23730); }
+    .tag-blue   { background: var(--info-bg, #e5eef6); color: var(--info, #275e8e); }
+    .tag-orange { background: var(--warning-bg, #faf0dc); color: var(--warning, #9c6510); }
+    .tag-purple { background: #ede5f5; color: #5e4187; }
+
+    /* Detail modal */
+    .pub-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .pub-detail-grid .full { grid-column: 1 / -1; }
+    .pub-detail-grid dt { font-size: 11.5px; font-weight: 650; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; }
+    .pub-detail-grid dd { margin: 2px 0 10px; font-size: 13.5px; color: var(--ink); line-height: 1.5; word-break: break-word; }
+    .pub-detail-photo { width: 100%; border-radius: var(--radius); margin-top: 8px; object-fit: cover; max-height: 300px; }
+
+    /* Map */
+    .pub-map-wrap { margin-bottom: 32px; }
+    .pub-map-shell { display: flex; gap: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; height: 480px; }
+    .pub-map-side { width: 280px; flex-shrink: 0; padding: 16px; border-right: 1px solid var(--line); overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+    .pub-map-side .map-search { position: relative; }
+    .pub-map-side .map-search input { width: 100%; height: 38px; padding: 0 12px 0 34px; border: 1px solid var(--line); border-radius: var(--radius); font-size: 13px; background: var(--surface-2); outline: none; }
+    .pub-map-side .map-search input:focus { border-color: var(--green-600); }
+    .pub-map-side .map-search .search-ico { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--ink-3); pointer-events: none; }
+    .pub-map-side .map-search .search-ico svg { width: 14px; height: 14px; }
+    .pub-map-layers label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer; padding: 4px 0; }
+    .pub-map-layers i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+    .pub-map-layers b { margin-left: auto; font-size: 11px; color: var(--ink-3); }
+    .pub-map-canvas { flex: 1; min-width: 0; }
+    .pub-map-canvas .leaflet-container { height: 100%; width: 100%; }
+
+    .map-popup { max-width: 260px; font-size: 13px; line-height: 1.5; }
+    .map-popup h3 { font-size: 14px; font-weight: 660; margin: 0 0 4px; }
+    .map-popup p { margin: 3px 0; color: var(--ink-2, #4d5a52); }
+    .map-popup .map-popup-img { width: 100%; height: 120px; object-fit: cover; border-radius: 5px; margin-bottom: 8px; }
+
+    /* Empty state */
+    .pub-empty { text-align: center; padding: 48px 20px; color: var(--ink-3); }
+    .pub-empty svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: .4; }
+    .pub-empty p { font-size: 14px; }
+
+    /* Pagination */
+    .pub-pagination { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 28px; }
+    .pub-pagination button { min-width: 36px; height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink-2); font-size: 13px; font-weight: 600; cursor: pointer; transition: background .13s, color .13s; }
+    .pub-pagination button:hover:not(:disabled) { background: var(--bg-hover, #f1f0ea); }
+    .pub-pagination button.active { background: var(--green-700); color: #fff; border-color: var(--green-700); }
+    .pub-pagination button:disabled { opacity: .45; cursor: default; }
+    .pub-pagination .page-info { font-size: 12.5px; color: var(--ink-3); margin: 0 8px; }
+
+    /* Footer */
+    .pub-footer { text-align: center; padding: 24px 0; margin-top: 48px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 12.5px; }
+
+    /* Loading */
+    .pub-loading { text-align: center; padding: 40px; color: var(--ink-3); font-size: 13px; }
+    .pub-loading .spinner { display: inline-block; width: 20px; height: 20px; border: 2.5px solid var(--line); border-top-color: var(--green-600); border-radius: 50%; animation: spin .7s linear infinite; margin-bottom: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Responsive */
+    @media (max-width: 860px) {
+      .pub-map-shell { flex-direction: column; height: auto; }
+      .pub-map-side { width: 100%; height: auto; max-height: 200px; border-right: none; border-bottom: 1px solid var(--line); }
+      .pub-map-canvas { height: 380px; }
+      .pub-detail-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 500px) {
+      .pub-grid { grid-template-columns: 1fr; }
+      .pub-stats { grid-template-columns: 1fr; }
+      .pub-header { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body class="dashboard-page" style="padding-top: 0;">
+
+  <div class="pub-wrap">
+    <!-- Header -->
+    <header class="pub-header">
+      <a href="/" class="brand">
+        <svg viewBox="0 0 64 64" fill="none">
+          <path d="M32 6l20 7.5V32c0 12.6-8.3 21.8-20 25.5C20.3 53.8 12 44.6 12 32V13.5L32 6z" fill="none" stroke="#1a5c3e" stroke-width="2.6" stroke-linejoin="round"/>
+          <path d="M21.5 44h21M24.5 39.5h15M26.5 39.5V26M31 39.5V26M35.5 39.5V26M24 24.5 32 17.5l8 7h-16z" fill="none" stroke="#1a5c3e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <div class="brand-name">JohorSatuData</div>
+          <div class="brand-sub">Kecamatan Medan Johor</div>
+        </div>
+      </a>
+      <div class="header-right">
+        <a href="/" class="btn btn-secondary btn-sm">Masuk</a>
+      </div>
+    </header>
+
+    <!-- Summary Stats -->
+    <div class="pub-stats" id="pubStats"></div>
+
+    <!-- Tabs -->
+    <div class="pub-tabs" id="pubTabs">
+      <button class="pub-tab active" data-tab="usaha">
+        <span>🏢 Data Usaha</span>
+        <span class="tab-count" id="cnt-usaha">—</span>
+      </button>
+      <button class="pub-tab" data-tab="bencana">
+        <span>⚠️ Titik Rawan Bencana</span>
+        <span class="tab-count" id="cnt-bencana">—</span>
+      </button>
+      <button class="pub-tab" data-tab="ibadah">
+        <span>🕌 Rumah Ibadah</span>
+        <span class="tab-count" id="cnt-ibadah">—</span>
+      </button>
+      <button class="pub-tab" data-tab="peta">
+        <span>🗺️ Peta</span>
+      </button>
+    </div>
+
+    <!-- Toolbar (search + filters) -->
+    <div class="pub-toolbar" id="pubToolbar">
+      <div class="pub-search">
+        <span class="search-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.5 15.5 5 5"/></svg></span>
+        <input type="search" id="searchInput" placeholder="Cari data…" autocomplete="off">
+      </div>
+      <div class="pub-filters" id="filterArea"></div>
+    </div>
+
+    <!-- Content -->
+    <div id="contentArea">
+      <div class="pub-loading"><div class="spinner"></div><br>Memuat data…</div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="pub-footer">
+      <span>&copy; 2026 JohorSatuData — Kecamatan Medan Johor, Kota Medan, Sumatera Utara</span>
+    </footer>
+  </div>
+
+  <!-- Modal Container -->
+  <div id="modalContainer"></div>
+
+  <script src="/vendor/leaflet/leaflet.js"></script>
+  <script src="/js/icons.js"></script>
+  <script>
+    /* ========================================
+       Public Data Page — no login required
+       ======================================== */
+    (() => {
+      const esc = (s) => s == null ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      const gmapsDir = (la, ln) => `https://www.google.com/maps/dir/?api=1&destination=${la},${ln}`;
+
+      const state = { tab: 'usaha', q: '', filters: {}, page: 1, per: 12 };
+      let metaCache = null;
+      let mapInstance = null;
+      let mapLayers = {};
+      let mapLoaded = false;
+
+      /* ---------- Meta ---------- */
+      async function getMeta() {
+        if (metaCache) return metaCache;
+        const r = await fetch('/api/meta');
+        metaCache = await r.json();
+        return metaCache;
+      }
+
+      /* ---------- Stats ---------- */
+      async function loadStats() {
+        try {
+          const r = await fetch('/api/publik/summary');
+          const d = await r.json();
+          const box = document.getElementById('pubStats');
+          box.innerHTML = `
+            <div class="pub-stat">
+              <div class="pub-stat-icon green">${Icon.i('store')}</div>
+              <div><div class="pub-stat-num">${d.bizTotal}</div><div class="pub-stat-label">Data Usaha</div></div>
+            </div>
+            <div class="pub-stat">
+              <div class="pub-stat-icon orange">${Icon.i('warning')}</div>
+              <div><div class="pub-stat-num">${d.disTotal}</div><div class="pub-stat-label">Titik Rawan Bencana</div></div>
+            </div>
+            <div class="pub-stat">
+              <div class="pub-stat-icon purple">${Icon.i('landmark')}</div>
+              <div><div class="pub-stat-num">${d.worTotal}</div><div class="pub-stat-label">Rumah Ibadah</div></div>
+            </div>`;
+          document.getElementById('cnt-usaha').textContent = d.bizTotal;
+          document.getElementById('cnt-bencana').textContent = d.disTotal;
+          document.getElementById('cnt-ibadah').textContent = d.worTotal;
+        } catch (e) { console.error('Stats error:', e); }
+      }
+
+      /* ---------- Tabs ---------- */
+      document.getElementById('pubTabs').addEventListener('click', (e) => {
+        const btn = e.target.closest('.pub-tab');
+        if (!btn) return;
+        document.querySelectorAll('.pub-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.tab = btn.dataset.tab;
+        state.page = 1;
+        state.q = '';
+        state.filters = {};
+        document.getElementById('searchInput').value = '';
+        renderToolbar();
+        loadContent();
+      });
+
+      /* ---------- Toolbar ---------- */
+      function renderToolbar() {
+        const fa = document.getElementById('filterArea');
+        if (state.tab === 'peta') {
+          document.getElementById('pubToolbar').style.display = 'none';
+          return;
+        }
+        document.getElementById('pubToolbar').style.display = '';
+        if (state.tab === 'usaha') {
+          fa.innerHTML = `
+            <select data-f="kategori"><option value="">Semua Kategori</option></select>
+            <select data-f="jenis"><option value="">Semua Jenis</option></select>
+            <select data-f="kelurahan"><option value="">Semua Kelurahan</option></select>`;
+          getMeta().then(m => {
+            (m.enums.kategori || []).forEach(k => fa.querySelector('[data-f=kategori]').innerHTML += `<option value="${esc(k)}">${esc(k)}</option>`);
+            (m.enums.jenis || []).forEach(k => fa.querySelector('[data-f=jenis]').innerHTML += `<option value="${esc(k)}">${esc(k)}</option>`);
+            (m.enums.kelurahan || []).forEach(k => fa.querySelector('[data-f=kelurahan]').innerHTML += `<option value="${esc(k)}">${esc(k)}</option>`);
+          });
+        } else if (state.tab === 'bencana') {
+          fa.innerHTML = `
+            <select data-f="jenis"><option value="">Semua Jenis</option></select>
+            <select data-f="kelurahan"><option value="">Semua Kelurahan</option></select>`;
+          getMeta().then(m => {
+            (m.enums.jenis_bencana || []).forEach(k => fa.querySelector('[data-f=jenis]').innerHTML += `<option value="${esc(k)}">${esc(k)}</option>`);
+            (m.enums.kelurahan || []).forEach(k => fa.querySelector('[data-f=kelurahan]').innerHTML += `<option value="${esc(k)}">${esc(k)}</option>`);
+          });
+        } else if (state.tab === 'ibadah') {
+          fa.innerHTML = `
+            <select data-f="agama"><option value="">Semua Agama</option></select>
+            <select data-f="kelurahan"><option value="">Semua Kelurahan</option></select>`;
+          getMeta().then(m => {
+            (m.enums.agama || []).forEach(k => fa.querySelector('[data-f=agama]').innerHTML += `<option value="${esc(k)}">${esc(k)}</option>`);
+            (m.enums.kelurahan || []).forEach(k => fa.querySelector('[data-f=kelurahan]').innerHTML += `<option value="${esc(k)}">${esc(k)}</option>`);
+          });
+        }
+      }
+
+      document.getElementById('filterArea').addEventListener('change', (e) => {
+        const sel = e.target.closest('select');
+        if (!sel) return;
+        const key = sel.dataset.f;
+        state.filters = {};
+        document.querySelectorAll('#filterArea select').forEach(s => { if (s.value) state.filters[s.dataset.f] = s.value; });
+        state.page = 1;
+        loadContent();
+      });
+
+      document.getElementById('searchInput').addEventListener('input', (() => {
+        let t;
+        return (e) => { clearTimeout(t); t = setTimeout(() => { state.q = e.target.value.trim(); state.page = 1; loadContent(); }, 350); };
+      })());
+
+      /* ---------- Load content ---------- */
+      async function loadContent() {
+        const area = document.getElementById('contentArea');
+        if (state.tab === 'peta') { loadMap(); return; }
+
+        area.innerHTML = '<div class="pub-loading"><div class="spinner"></div><br>Memuat data…</div>';
+
+        const params = new URLSearchParams();
+        params.set('page', state.page);
+        params.set('per', state.per);
+        if (state.q) params.set('search', state.q);
+        for (const [k, v] of Object.entries(state.filters)) params.set(k, v);
+
+        const endpoint = state.tab === 'usaha' ? '/api/publik/businesses'
+          : state.tab === 'bencana' ? '/api/publik/disasters'
+          : '/api/publik/worship';
+
+        try {
+          const r = await fetch(`${endpoint}?${params}`);
+          const d = await r.json();
+          if (state.tab === 'usaha') renderBiz(d);
+          else if (state.tab === 'bencana') renderDis(d);
+          else renderWor(d);
+        } catch (e) {
+          area.innerHTML = '<div class="pub-empty"><p>Gagal memuat data. Silakan coba lagi.</p></div>';
+        }
+      }
+
+      /* ---------- Render: Businesses ---------- */
+      function renderBiz(d) {
+        const area = document.getElementById('contentArea');
+        if (!d.rows.length) {
+          area.innerHTML = `<div class="pub-empty">${Icon.i('store')}<p>Tidak ada data usaha ditemukan.</p></div>`;
+          renderPagination(d);
+          return;
+        }
+        let html = '<div class="pub-grid">';
+        for (const b of d.rows) {
+          html += `<div class="pub-card" onclick="showDetail('usaha',${b.id})" style="cursor:pointer">
+            <div class="pub-card-img" style="${b.foto_usaha ? `background-image:url(${esc(b.foto_usaha)})` : ''}">
+              <span class="badge">${esc(b.kategori_usaha)}</span>
+            </div>
+            <div class="pub-card-body">
+              <h3>${esc(b.nama_usaha)}</h3>
+              <div class="card-meta">
+                <div>${Icon.i('map-pin')} ${esc(b.alamat)}</div>
+                <div>${Icon.i('user')} ${esc(b.nama_pic)}</div>
+                ${b.kelurahan ? `<div>${Icon.i('building')} Kel. ${esc(b.kelurahan)}</div>` : ''}
+              </div>
+              <div class="card-tags">
+                <span class="tag">${esc(b.jenis_kepemilikan)}</span>
+                ${b.izin_usaha ? '<span class="tag tag-green">Berizin</span>' : '<span class="tag tag-red">Tanpa Izin</span>'}
+              </div>
+            </div>
+          </div>`;
+        }
+        html += '</div>';
+        area.innerHTML = html;
+        renderPagination(d);
+      }
+
+      /* ---------- Render: Disasters ---------- */
+      function renderDis(d) {
+        const area = document.getElementById('contentArea');
+        if (!d.rows.length) {
+          area.innerHTML = `<div class="pub-empty">${Icon.i('warning')}<p>Tidak ada data bencana ditemukan.</p></div>`;
+          renderPagination(d);
+          return;
+        }
+        let html = '<div class="pub-grid">';
+        for (const b of d.rows) {
+          html += `<div class="pub-card" onclick="showDetail('bencana',${b.id})" style="cursor:pointer">
+            <div class="pub-card-img" style="${b.foto ? `background-image:url(${esc(b.foto)})` : ''}">
+              <span class="badge">${esc(b.jenis_bencana)}</span>
+            </div>
+            <div class="pub-card-body">
+              <h3>${esc(b.nama_lokasi)}</h3>
+              <div class="card-meta">
+                <div>${Icon.i('map-pin')} ${esc(b.alamat)}</div>
+                <div>${Icon.i('info')} Penyebab: ${esc(b.penyebab)}</div>
+                ${b.kelurahan ? `<div>${Icon.i('building')} Kel. ${esc(b.kelurahan)}</div>` : ''}
+              </div>
+              <div class="card-tags">
+                <span class="tag tag-orange">${esc(b.jenis_bencana)}</span>
+                ${b.jumlah_rumah ? `<span class="tag">${b.jumlah_rumah} Rumah</span>` : ''}
+              </div>
+            </div>
+          </div>`;
+        }
+        html += '</div>';
+        area.innerHTML = html;
+        renderPagination(d);
+      }
+
+      /* ---------- Render: Worship ---------- */
+      function renderWor(d) {
+        const area = document.getElementById('contentArea');
+        if (!d.rows.length) {
+          area.innerHTML = `<div class="pub-empty">${Icon.i('landmark')}<p>Tidak ada data rumah ibadah ditemukan.</p></div>`;
+          renderPagination(d);
+          return;
+        }
+        let html = '<div class="pub-grid">';
+        for (const b of d.rows) {
+          html += `<div class="pub-card" onclick="showDetail('ibadah',${b.id})" style="cursor:pointer">
+            <div class="pub-card-img" style="${b.foto ? `background-image:url(${esc(b.foto)})` : ''}">
+              <span class="badge">${esc(b.jenis)}</span>
+            </div>
+            <div class="pub-card-body">
+              <h3>${esc(b.nama)}</h3>
+              <div class="card-meta">
+                <div>${Icon.i('map-pin')} ${esc(b.alamat)}</div>
+                ${b.nama_pengelola ? `<div>${Icon.i('user')} ${esc(b.nama_pengelola)}</div>` : ''}
+                ${b.kelurahan ? `<div>${Icon.i('building')} Kel. ${esc(b.kelurahan)}</div>` : ''}
+              </div>
+              <div class="card-tags">
+                <span class="tag tag-purple">${esc(b.agama)}</span>
+                <span class="tag">${esc(b.jenis)}</span>
+              </div>
+            </div>
+          </div>`;
+        }
+        html += '</div>';
+        area.innerHTML = html;
+        renderPagination(d);
+      }
+
+      /* ---------- Pagination ---------- */
+      function renderPagination(d) {
+        const totalPages = Math.ceil(d.total / d.per) || 1;
+        if (totalPages <= 1) return;
+        let html = '<div class="pub-pagination">';
+        html += `<button onclick="goPage(${state.page - 1})" ${state.page <= 1 ? 'disabled' : ''}>‹</button>`;
+        const range = [];
+        const start = Math.max(1, state.page - 2);
+        const end = Math.min(totalPages, state.page + 2);
+        if (start > 1) { range.push(1); if (start > 2) range.push('…'); }
+        for (let i = start; i <= end; i++) range.push(i);
+        if (end < totalPages) { if (end < totalPages - 1) range.push('…'); range.push(totalPages); }
+        for (const p of range) {
+          if (p === '…') html += '<span class="page-info">…</span>';
+          else html += `<button class="${p === state.page ? 'active' : ''}" onclick="goPage(${p})">${p}</button>`;
+        }
+        html += `<button onclick="goPage(${state.page + 1})" ${state.page >= totalPages ? 'disabled' : ''}>›</button>`;
+        html += `<span class="page-info">${d.total} data</span>`;
+        html += '</div>';
+        document.getElementById('contentArea').innerHTML += html;
+      }
+
+      window.goPage = (p) => { state.page = p; loadContent(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+
+      /* ---------- Map ---------- */
+      function loadMap() {
+        const area = document.getElementById('contentArea');
+        if (!mapLoaded) {
+          area.innerHTML = `
+            <div class="pub-map-wrap">
+              <div class="pub-map-shell">
+                <div class="pub-map-side">
+                  <div class="map-search">
+                    <span class="search-ico">${Icon.i('search')}</span>
+                    <input type="search" id="mapSearch" placeholder="Cari di peta…" autocomplete="off">
+                  </div>
+                  <div class="pub-map-layers" id="mapLayers"></div>
+                  <div id="mapResultInfo" style="font-size:12px;color:var(--ink-3);margin-top:auto;"></div>
+                </div>
+                <div class="pub-map-canvas" id="mapCanvas"></div>
+              </div>
+            </div>`;
+          initMap();
+        } else {
+          setTimeout(() => { if (mapInstance) mapInstance.invalidateSize(); }, 100);
+        }
+      }
+
+      const TYPES = {
+        business:  { label: 'Usaha',         color: '#275e8e', glyph: 'store' },
+        disaster:  { label: 'Rawan Bencana', color: '#b23730', glyph: 'warning' },
+        gathering: { label: 'Titik Kumpul',  color: '#1e7d46', glyph: 'tent' },
+        worship:   { label: 'Rumah Ibadah',  color: '#5e4187', glyph: 'landmark' },
+      };
+      const KATEGORI_COLORS = {
+        'PERDAGANGAN': '#1a73e8', 'KULINER': '#ea4335', 'JASA PERAWATAN KECANTIKAN': '#e91e63',
+        'JASA PERBAIKAN DAN TEKNIK': '#ff9800', 'LAUNDRY DAN DOORSMEER': '#9c27b0',
+        'PRODUKSI DAN INDUSTRI RUMAH TANGGA': '#607d8b', 'PERTANIAN': '#4caf50',
+        'PERIKANAN': '#00bcd4', 'PETERNAKAN': '#795548',
+      };
+
+      function makeIcon(glyph, color, size = 32) {
+        return L.divIcon({
+          className: 'custom-marker-wrapper',
+          html: `<div class="custom-marker" style="background:${color}"><span class="pin-icon">${Icon.i(glyph)}</span></div>`,
+          iconSize: [size, size], iconAnchor: [size / 2, size], popupAnchor: [0, -size],
+        });
+      }
+
+      const photoTag = (src) => src ? `<img src="${esc(src)}" class="map-popup-img" alt="Foto" loading="lazy">` : '';
+      const kelTag = (k) => k ? `<span class="tag tag-blue" style="margin-right:4px">${esc(k)}</span>` : '';
+
+      async function initMap() {
+        mapLoaded = true;
+        const JOHOR = [3.5750, 98.6400];
+        mapInstance = L.map('mapCanvas', { center: JOHOR, zoom: 14, minZoom: 3, maxZoom: 19, zoomControl: false });
+        L.control.zoom({ position: 'bottomright' }).addTo(mapInstance);
+        const street = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(mapInstance);
+        const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
+        L.control.layers({ 'Peta Jalan': street, 'Citra Satelit': sat }, null, { position: 'topright' }).addTo(mapInstance);
+        for (const t of Object.keys(TYPES)) mapLayers[t] = L.layerGroup().addTo(mapInstance);
+
+        const mapItems = [];
+
+        // Load data
+        const safe = async (url, fn) => { try { const r = await fetch(url); fn(await r.json()); } catch(e) { console.error(e); } };
+
+        await safe('/api/publik/businesses/map', (r) => r.places.forEach(p => {
+          if (p.lat == null || p.lng == null) return;
+          const icon = makeIcon('store', KATEGORI_COLORS[p.kategori_usaha] || TYPES.business.color);
+          const marker = L.marker([p.lat, p.lng], { icon });
+          marker.bindPopup(`<div class="map-popup">${photoTag(p.foto_usaha)}<h3>${esc(p.nama_usaha)}</h3><div>${kelTag(p.kelurahan)}<span class="tag">${esc(p.kategori_usaha)}</span></div><p>${Icon.i('map-pin')} ${esc(p.alamat)}</p><p>${Icon.i('user')} ${esc(p.nama_pic)}</p></div>`, { maxWidth: 280 });
+          mapLayers.business.addLayer(marker);
+          mapItems.push({ type: 'business', name: p.nama_usaha, kel: p.kelurahan || '', sub: p.kategori_usaha, marker, latlng: [p.lat, p.lng] });
+        }));
+
+        await safe('/api/publik/disasters/map', (r) => r.places.forEach(p => {
+          if (p.lat != null && p.lng != null) {
+            const icon = makeIcon('warning', TYPES.disaster.color);
+            const marker = L.marker([p.lat, p.lng], { icon });
+            marker.bindPopup(`<div class="map-popup">${photoTag(p.foto)}<h3>${esc(p.nama_lokasi)}</h3><div>${kelTag(p.kelurahan)}<span class="tag tag-orange">${esc(p.jenis_bencana)}</span></div><p>${Icon.i('map-pin')} ${esc(p.alamat)}</p><p>Penyebab: ${esc(p.penyebab)}</p></div>`, { maxWidth: 280 });
+            mapLayers.disaster.addLayer(marker);
+            mapItems.push({ type: 'disaster', name: p.nama_lokasi, kel: p.kelurahan || '', sub: p.jenis_bencana, marker, latlng: [p.lat, p.lng] });
+          }
+          if (p.titik_kumpul_lat != null && p.titik_kumpul_lng != null) {
+            const icon = makeIcon('tent', TYPES.gathering.color);
+            const marker = L.marker([p.titik_kumpul_lat, p.titik_kumpul_lng], { icon });
+            marker.bindPopup(`<div class="map-popup">${photoTag(p.titik_kumpul_foto)}<h3>Titik Kumpul</h3><div>${kelTag(p.kelurahan)}<span class="tag tag-green">Posko / Evakuasi</span></div><p>${Icon.i('map-pin')} ${esc(p.titik_kumpul || '-')}</p><p>Untuk: <strong>${esc(p.nama_lokasi)}</strong></p></div>`, { maxWidth: 280 });
+            mapLayers.gathering.addLayer(marker);
+            mapItems.push({ type: 'gathering', name: 'Titik Kumpul — ' + p.nama_lokasi, kel: p.kelurahan || '', sub: '', marker, latlng: [p.titik_kumpul_lat, p.titik_kumpul_lng] });
+          }
+        }));
+
+        await safe('/api/publik/worship/map', (r) => r.places.forEach(p => {
+          if (p.lat == null || p.lng == null) return;
+          const icon = makeIcon('landmark', TYPES.worship.color);
+          const marker = L.marker([p.lat, p.lng], { icon });
+          marker.bindPopup(`<div class="map-popup">${photoTag(p.foto)}<h3>${esc(p.nama)}</h3><div>${kelTag(p.kelurahan)}<span class="tag tag-purple">${esc(p.jenis)}</span></div><p>${esc(p.agama)}</p><p>${Icon.i('map-pin')} ${esc(p.alamat)}</p>${p.nama_pengelola ? `<p>${Icon.i('user')} ${esc(p.nama_pengelola)}</p>` : ''}</div>`, { maxWidth: 280 });
+          mapLayers.worship.addLayer(marker);
+          mapItems.push({ type: 'worship', name: p.nama, kel: p.kelurahan || '', sub: p.agama + ' ' + p.jenis, marker, latlng: [p.lat, p.lng] });
+        }));
+
+        // Layers UI
+        const layersEl = document.getElementById('mapLayers');
+        layersEl.innerHTML = Object.entries(TYPES).map(([t, c]) =>
+          `<label><input type="checkbox" data-mlayer="${t}" checked><i style="background:${c.color}"></i><span>${c.label}</span><b id="mcnt-${t}">0</b></label>`
+        ).join('');
+        const counts = {};
+        for (const t of Object.keys(TYPES)) counts[t] = { shown: 0, total: 0 };
+        mapItems.forEach(it => { counts[it.type].total++; counts[it.type].shown++; });
+        for (const t of Object.keys(TYPES)) {
+          const el = document.getElementById('mcnt-' + t);
+          if (el) el.textContent = counts[t].total;
+        }
+        document.getElementById('mapResultInfo').textContent = mapItems.length + ' data ditampilkan';
+
+        layersEl.querySelectorAll('[data-mlayer]').forEach(cb => {
+          cb.addEventListener('change', () => {
+            const t = cb.dataset.mlayer;
+            if (cb.checked) mapInstance.addLayer(mapLayers[t]);
+            else mapInstance.removeLayer(mapLayers[t]);
+          });
+        });
+
+        // Search
+        document.getElementById('mapSearch').addEventListener('input', function() {
+          const q = this.value.trim().toLowerCase();
+          for (const it of mapItems) {
+            const visible = !q || it.name.toLowerCase().includes(q) || it.kel.toLowerCase().includes(q) || it.sub.toLowerCase().includes(q);
+            const inLayer = mapLayers[it.type].hasLayer(it.marker);
+            if (visible && !inLayer) mapLayers[it.type].addLayer(it.marker);
+            if (!visible && inLayer) mapLayers[it.type].removeLayer(it.marker);
+          }
+        });
+
+        setTimeout(() => mapInstance.invalidateSize(), 200);
+      }
+
+      /* ---------- Detail Modal ---------- */
+      window.showDetail = async (type, id) => {
+        const endpoint = type === 'usaha' ? '/api/publik/businesses' : type === 'bencana' ? '/api/publik/disasters' : '/api/publik/worship';
+        try {
+          // Fetch all pages to find the item (public API doesn't have /:id)
+          const r = await fetch(`${endpoint}?page=1&per=100`);
+          const d = await r.json();
+          const item = d.rows.find(r => r.id === id);
+          if (!item) return;
+          let body = '';
+          if (type === 'usaha') body = detailBiz(item);
+          else if (type === 'bencana') body = detailDis(item);
+          else body = detailWor(item);
+
+          // Simple modal
+          const overlay = document.createElement('div');
+          overlay.className = 'modal-overlay';
+          overlay.innerHTML = `<div class="modal modal-lg" role="dialog" aria-modal="true">
+            <div class="modal-header"><h3>${esc(type === 'usaha' ? item.nama_usaha : type === 'bencana' ? item.nama_lokasi : item.nama)}</h3>
+            <button type="button" class="modal-close" aria-label="Tutup">${Icon.i('x')}</button></div>
+            <div class="modal-body">${body}</div></div>`;
+          overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+          overlay.querySelector('.modal-close').addEventListener('click', () => overlay.remove());
+          document.getElementById('modalContainer').appendChild(overlay);
+        } catch (e) { console.error(e); }
+      };
+
+      function detailBiz(b) {
+        return `<div class="pub-detail-grid">
+          <div><dt>Ref</dt><dd>${esc(b.ref)}</dd></div>
+          <div><dt>Kategori</dt><dd>${esc(b.kategori_usaha)}</dd></div>
+          <div><dt>Jenis Kepemilikan</dt><dd>${esc(b.jenis_kepemilikan)}</dd></div>
+          <div><dt>Skala Usaha</dt><dd>${esc(b.skala_usaha || '-')}</dd></div>
+          <div><dt>Jumlah Pekerja</dt><dd>${esc(b.jumlah_pekerja || '-')}</dd></div>
+          <div><dt>Izin Usaha</dt><dd>${b.izin_usaha ? '<span class="tag tag-green">Berizin</span>' : '<span class="tag tag-red">Tanpa Izin</span>'}</dd></div>
+          <div><dt>Penanggung Jawab</dt><dd>${esc(b.nama_pic)}</dd></div>
+          <div><dt>HP</dt><dd>${esc(b.hp_pic)}</dd></div>
+          <div><dt>Kelengkapan Keamanan</dt><dd>${esc(b.kelengkapan_keamanan)}</dd></div>
+          <div><dt>Kelurahan</dt><dd>${esc(b.kelurahan || '-')}</dd></div>
+          <div class="full"><dt>Alamat</dt><dd>${esc(b.alamat)}</dd></div>
+          ${b.lat && b.lng ? `<div class="full"><dt>Koordinat</dt><dd>${b.lat.toFixed(6)}, ${b.lng.toFixed(6)} &nbsp; <a href="${gmapsDir(b.lat, b.lng)}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">${Icon.i('navigation')} Rute</a></dd></div>` : ''}
+          ${b.foto_usaha ? `<div class="full"><dt>Foto</dt><dd><img src="${esc(b.foto_usaha)}" class="pub-detail-photo" alt="Foto usaha"></dd></div>` : ''}
+        </div>`;
+      }
+
+      function detailDis(d) {
+        return `<div class="pub-detail-grid">
+          <div><dt>Ref</dt><dd>${esc(d.ref)}</dd></div>
+          <div><dt>Jenis Bencana</dt><dd><span class="tag tag-orange">${esc(d.jenis_bencana)}</span></dd></div>
+          <div><dt>Kelurahan</dt><dd>${esc(d.kelurahan || '-')}</dd></div>
+          <div><dt>Penyebab</dt><dd>${esc(d.penyebab)}</dd></div>
+          <div><dt>Rumah Terdampak</dt><dd>${esc(d.jumlah_rumah || '-')}</dd></div>
+          <div><dt>KK Terdampak</dt><dd>${esc(d.jumlah_kk || '-')}</dd></div>
+          <div class="full"><dt>Alamat</dt><dd>${esc(d.alamat)}</dd></div>
+          ${d.deskripsi ? `<div class="full"><dt>Deskripsi</dt><dd>${esc(d.deskripsi)}</dd></div>` : ''}
+          <div class="full"><dt>Titik Kumpul</dt><dd>${esc(d.titik_kumpul)}</dd></div>
+          ${d.titik_kumpul_lat && d.titik_kumpul_lng ? `<div class="full"><dt>Koordinat Titik Kumpul</dt><dd>${d.titik_kumpul_lat.toFixed(6)}, ${d.titik_kumpul_lng.toFixed(6)} &nbsp; <a href="${gmapsDir(d.titik_kumpul_lat, d.titik_kumpul_lng)}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">${Icon.i('navigation')} Rute</a></dd></div>` : ''}
+          ${d.lat && d.lng ? `<div class="full"><dt>Koordinat Lokasi</dt><dd>${d.lat.toFixed(6)}, ${d.lng.toFixed(6)}</dd></div>` : ''}
+          ${d.foto ? `<div class="full"><dt>Foto</dt><dd><img src="${esc(d.foto)}" class="pub-detail-photo" alt="Foto bencana"></dd></div>` : ''}
+          ${d.titik_kumpul_foto ? `<div class="full"><dt>Foto Titik Kumpul</dt><dd><img src="${esc(d.titik_kumpul_foto)}" class="pub-detail-photo" alt="Foto titik kumpul"></dd></div>` : ''}
+        </div>`;
+      }
+
+      function detailWor(w) {
+        return `<div class="pub-detail-grid">
+          <div><dt>Ref</dt><dd>${esc(w.ref)}</dd></div>
+          <div><dt>Jenis</dt><dd>${esc(w.jenis)}</dd></div>
+          <div><dt>Agama</dt><dd><span class="tag tag-purple">${esc(w.agama)}</span></dd></div>
+          <div><dt>Kelurahan</dt><dd>${esc(w.kelurahan || '-')}</dd></div>
+          <div class="full"><dt>Alamat</dt><dd>${esc(w.alamat)}</dd></div>
+          ${w.nama_pengelola ? `<div><dt>Pengelola</dt><dd>${esc(w.nama_pengelola)}</dd></div>` : ''}
+          ${w.hp_pengelola ? `<div><dt>HP Pengelola</dt><dd>${esc(w.hp_pengelola)}</dd></div>` : ''}
+          ${w.lat && w.lng ? `<div class="full"><dt>Koordinat</dt><dd>${w.lat.toFixed(6)}, ${w.lng.toFixed(6)} &nbsp; <a href="${gmapsDir(w.lat, w.lng)}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">${Icon.i('navigation')} Rute</a></dd></div>` : ''}
+          ${w.foto ? `<div class="full"><dt>Foto</dt><dd><img src="${esc(w.foto)}" class="pub-detail-photo" alt="Foto rumah ibadah"></dd></div>` : ''}
+        </div>`;
+      }
+
+      /* ---------- Init ---------- */
+      loadStats();
+      renderToolbar();
+      loadContent();
+    })();
+  </script>
+</body>
+</html>

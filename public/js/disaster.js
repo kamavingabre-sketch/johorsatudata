@@ -30,7 +30,7 @@ const Disaster = (() => {
           ${kelOptions(meta, '')}
           <option value="__kosong">— Belum diisi —</option>
         </select>
-        <a href="#tambah-bencana" class="btn btn-primary btn-sm">${Icon.i('plus')} Tambah Bencana</a>
+        <a href="#tambah-bencana" class="btn btn-primary btn-sm">${Icon.i('plus')} Tambah Data Bencana</a>
       </div>
       <div id="disasterTableContainer"><div class="loading">Memuat...</div></div>
     `;
