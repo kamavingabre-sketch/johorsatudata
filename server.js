@@ -18,6 +18,7 @@ app.use('/api/disasters', require('./src/routes/disasters'));
 app.use('/api/worship', require('./src/routes/worship'));
 app.use('/api', require('./src/routes/stats'));
 app.use('/api', require('./src/routes/logs'));
+app.use('/api/publik', require('./src/routes/public'));
 
 app.get('/api/meta', (req, res) => {
   res.json({

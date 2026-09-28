@@ -20,7 +20,7 @@ const Worship = (() => {
           <option value="">Semua Agama</option>
           ${(meta.enums.agama || []).map(k => `<option value="${k}">${k}</option>`).join('')}
         </select>
-        <a href="#tambah-ibadah" class="btn btn-primary btn-sm">${Icon.i('plus')} Tambah Ibadah</a>
+        <a href="#tambah-ibadah" class="btn btn-primary btn-sm">${Icon.i('plus')} Tambah Data Rumah Ibadah</a>
       </div>
       <div id="worshipTableContainer"><div class="loading">Memuat...</div></div>
     `;
