@@ -255,9 +255,20 @@
         state.q = '';
         state.filters = {};
         document.getElementById('searchInput').value = '';
+        syncTabUrl();
         renderToolbar();
         loadContent();
       });
+
+      /* Selaraskan tab dengan URL supaya boleh dikongsi/dipaut terus (cth. /data.html?tab=peta) */
+      function syncTabUrl() {
+        try {
+          const u = new URL(location.href);
+          if (state.tab === 'usaha') u.searchParams.delete('tab');
+          else u.searchParams.set('tab', state.tab);
+          history.replaceState(null, '', u);
+        } catch (e) { /* ignore */ }
+      }
 
       /* ---------- Toolbar ---------- */
       function renderToolbar() {
@@ -674,6 +685,12 @@
       }
 
       /* ---------- Init ---------- */
+      const TABS = ['usaha', 'bencana', 'ibadah', 'peta'];
+      const urlTab = new URLSearchParams(location.search).get('tab');
+      if (TABS.includes(urlTab)) {
+        state.tab = urlTab;
+        document.querySelectorAll('.pub-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === urlTab));
+      }
       loadStats();
       renderToolbar();
       loadContent();
