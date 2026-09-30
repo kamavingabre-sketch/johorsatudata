@@ -20,12 +20,25 @@ const Worship = (() => {
           <option value="">Semua Agama</option>
           ${(meta.enums.agama || []).map(k => `<option value="${k}">${k}</option>`).join('')}
         </select>
+        ${App.exportButtonsHtml('wor')}
         <a href="#tambah-ibadah" class="btn btn-primary btn-sm">${Icon.i('plus')} Tambah Data Rumah Ibadah</a>
       </div>
       <div id="worshipTableContainer"><div class="loading">Memuat...</div></div>
     `;
 
     let page = 1;
+
+    App.wireExportButtons('wor', () => App.categoryIdByName('worship'), () => {
+      const params = {};
+      const search = document.getElementById('worshipSearch').value;
+      const agama = document.getElementById('worshipFilterAgama').value;
+      const kel = document.getElementById('worshipFilterKel').value;
+      if (search) params.search = search;
+      if (agama) params.agama = agama;
+      if (kel && kel !== '__kosong') params.kelurahan = kel;
+      return params;
+    });
+
     async function loadData() {
       const search = document.getElementById('worshipSearch').value;
       const agama = document.getElementById('worshipFilterAgama').value;
@@ -153,6 +166,18 @@ const Worship = (() => {
               <div class="form-group">
                 <label>Nomor HP Pengurus</label>
                 <input type="tel" name="hp_pengelola" value="${isEdit ? App.escapeHtml(worship.hp_pengelola || '') : ''}" placeholder="08xxxxxxxxxx">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-title">${Icon.i('camera')} Foto Rumah Ibadah</div>
+            <div class="form-group">
+              <label>Foto Rumah Ibadah ${!isEdit ? '<span class="required">*</span>' : ''}</label>
+              ${isEdit && worship.foto ? `<div class="photo-preview"><img src="${worship.foto}" alt="Foto saat ini"></div>` : ''}
+              <div class="file-upload">
+                <input type="file" name="foto" accept="image/jpeg,image/png,image/webp" ${!isEdit ? 'required' : ''}>
+                <div class="file-upload-text">Klik atau seret foto ke sini<br><small>JPG, PNG, WEBP (maks 8 MB)${isEdit ? ' — kosongkan jika tidak ingin mengubah' : ''}</small></div>
               </div>
             </div>
           </div>

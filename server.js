@@ -16,6 +16,8 @@ app.use('/api/users', require('./src/routes/users'));
 app.use('/api/businesses', require('./src/routes/businesses'));
 app.use('/api/disasters', require('./src/routes/disasters'));
 app.use('/api/worship', require('./src/routes/worship'));
+app.use('/api/categories', require('./src/routes/dataCategories'));
+app.use('/api/export', require('./src/routes/export'));
 app.use('/api', require('./src/routes/stats'));
 app.use('/api', require('./src/routes/logs'));
 app.use('/api/publik', require('./src/routes/public'));

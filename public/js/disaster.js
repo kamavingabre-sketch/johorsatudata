@@ -30,12 +30,23 @@ const Disaster = (() => {
           ${kelOptions(meta, '')}
           <option value="__kosong">— Belum diisi —</option>
         </select>
+        ${App.exportButtonsHtml('dis')}
         <a href="#tambah-bencana" class="btn btn-primary btn-sm">${Icon.i('plus')} Tambah Data Bencana</a>
       </div>
       <div id="disasterTableContainer"><div class="loading">Memuat...</div></div>
     `;
 
     let page = 1;
+
+    App.wireExportButtons('dis', () => App.categoryIdByName('disaster'), () => {
+      const params = {};
+      const search = document.getElementById('disasterSearch').value;
+      const kel = document.getElementById('disasterKel').value;
+      if (search) params.search = search;
+      if (kel && kel !== '__kosong') params.kelurahan = kel;
+      return params;
+    });
+
     async function loadData() {
       const params = new URLSearchParams({ page, per: 15 });
       const search = document.getElementById('disasterSearch').value;

@@ -45,6 +45,8 @@
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5 3.5 6.3v13.2L9 17.7l6 1.8 5.5-1.8V4.5L15 6.3l-6-1.8z"/><path d="M9 4.5v13.2M15 6.3v13.2"/></svg>
         <span>Peta Data</span>
       </a>
+
+      <div class="nav-divider"><span>Usaha</span></div>
       <a href="#data" class="nav-item" data-page="data">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="4" rx="1"/><rect x="3.5" y="10" width="17" height="4" rx="1"/><rect x="3.5" y="15.5" width="17" height="4" rx="1"/></svg>
         <span>Data Usaha</span>
@@ -74,7 +76,14 @@
         <span>Tambah Data Rumah Ibadah</span>
       </a>
 
-      <div class="nav-divider"><span>Administrasi</span></div>
+      <!-- Dynamic category nav items — diisi oleh dashboard.js -->
+      <div id="dynamicNavSection"></div>
+
+      <div class="nav-divider superadmin-only"><span>Administrasi</span></div>
+      <a href="#categories" class="nav-item superadmin-only" data-page="categories">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 17.5h7M17.5 14v7"/></svg>
+        <span>Kategori Data</span>
+      </a>
       <a href="#logs" class="nav-item superadmin-only" data-page="logs">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h11a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7"/><path d="M7 3.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2"/><path d="M9.5 8.5h7M9.5 12h7M9.5 15.5h4.5"/></svg>
         <span>Log Aktivitas</span>
@@ -136,5 +145,6 @@
   <script src="/js/worship.js"></script>
   <script src="/js/map.js"></script>
   <script src="/js/admin.js"></script>
+  <script src="/js/categoryManager.js"></script>
 </body>
 </html>

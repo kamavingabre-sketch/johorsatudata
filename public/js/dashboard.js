@@ -32,6 +32,9 @@ const Dashboard = (() => {
       showChangePasswordModal(true);
     }
 
+    // Muat nav item kategori dinamis
+    await refreshDynamicNav();
+
     const hash = window.location.hash.slice(1) || 'dashboard';
     navigateTo(hash);
   }
@@ -148,7 +151,7 @@ const Dashboard = (() => {
     }
     window.scrollTo(0, 0);
     document.querySelectorAll('.nav-item').forEach(el => {
-      el.classList.toggle('active', el.dataset.page === page);
+      el.classList.toggle('active', el.dataset.page === page || (page.startsWith('cat-') && el.dataset.page === page));
     });
     const container = document.getElementById('pageContainer');
     const title = document.getElementById('pageTitle');
@@ -194,8 +197,36 @@ const Dashboard = (() => {
         title.textContent = 'Tambah Rumah Ibadah';
         await Worship.renderForm(container);
         break;
+      case 'categories':
+        title.textContent = 'Kategori Data';
+        if (Auth.isSuperadmin()) await CategoryManager.renderPage(container);
+        break;
       default:
-        if (page.startsWith('edit/')) {
+        if (page.startsWith('cat-data-')) {
+          // Halaman list data kategori dinamis: cat-data-{catId}
+          const catId = parseInt(page.split('-')[2], 10);
+          if (catId) { await CategoryManager.renderDataPage(container, catId); }
+          else { window.location.hash = 'dashboard'; }
+        } else if (page.startsWith('cat-add-')) {
+          // Halaman tambah data kategori dinamis: cat-add-{catId}
+          const catId = parseInt(page.split('-')[2], 10);
+          if (catId) { await CategoryManager.renderAddForm(container, catId); }
+          else { window.location.hash = 'dashboard'; }
+        } else if (page.startsWith('cat-edit-')) {
+          // Halaman edit data kategori dinamis: cat-edit-{catId}-{dataId}
+          const parts = page.split('-');
+          const catId = parseInt(parts[2], 10), dataId = parseInt(parts[3], 10);
+          title.textContent = 'Edit Data';
+          if (catId && dataId) { await CategoryManager.renderEditForm(container, catId, dataId); }
+          else { window.location.hash = 'dashboard'; }
+        } else if (page.startsWith('cat-detail-')) {
+          // Halaman detail data kategori dinamis: cat-detail-{catId}-{dataId}
+          const parts = page.split('-');
+          const catId = parseInt(parts[2], 10), dataId = parseInt(parts[3], 10);
+          title.textContent = 'Detail Data';
+          if (catId && dataId) { await CategoryManager.renderDetail(container, catId, dataId); }
+          else { window.location.hash = 'dashboard'; }
+        } else if (page.startsWith('edit/')) {
           const id = page.split('/')[1];
           title.textContent = 'Edit Data Usaha';
           await Form.renderEdit(container, id);
@@ -349,21 +380,41 @@ const Dashboard = (() => {
 
   function renderRecentCards(items) {
     if (!items.length) return '<p class="text-muted">Belum ada data.</p>';
-    return `<div class="recent-grid">${items.map(i => `
-      <div class="recent-card" onclick="window.location.hash='detail/${i.id}'">
-        <div class="recent-card-img" style="${i.foto_usaha ? `background-image:url(${i.foto_usaha})` : ''}">
-          ${i.foto_usaha ? '' : Icon.i('store')}
-          <div class="recent-card-badge">${App.escapeHtml(i.kategori_usaha)}</div>
+    return `<div class="recent-grid">${items.map(i => {
+      const type = i._type || 'usaha';
+      let foto, displayName, subtitle, badge, hash, iconEl;
+      if (type === 'ibadah') {
+        foto = i._foto; displayName = i._display_name; subtitle = i._subtitle;
+        badge = i._badge; hash = i._hash || ('detail-ibadah/' + i.id);
+        iconEl = Icon.i('landmark');
+      } else if (type === 'bencana') {
+        foto = i._foto; displayName = i._display_name; subtitle = i._subtitle;
+        badge = i._badge; hash = i._hash || ('detail-bencana/' + i.id);
+        iconEl = Icon.i('warning');
+      } else if (type === 'dynamic') {
+        foto = null; displayName = i._display_name; subtitle = i._subtitle;
+        badge = i._badge; hash = i._hash || ('cat-detail-' + i._cat_id + '-' + i.id);
+        iconEl = Icon.i('info');
+      } else {
+        foto = i.foto_usaha; displayName = i.nama_usaha || i._display_name;
+        subtitle = i.alamat || i._subtitle; badge = i.kategori_usaha || i._badge;
+        hash = 'detail/' + i.id; iconEl = Icon.i('store');
+      }
+      return `
+      <div class="recent-card" onclick="window.location.hash='${App.escapeHtml(hash)}'">
+        <div class="recent-card-img" style="${foto ? 'background-image:url(' + foto + ')' : ''}">
+          ${foto ? '' : iconEl}
+          <div class="recent-card-badge">${App.escapeHtml(badge || '-')}</div>
         </div>
         <div class="recent-card-body">
-          <h4>${App.escapeHtml(i.nama_usaha)}</h4>
-          <p>${App.escapeHtml(i.alamat)}</p>
+          <h4>${App.escapeHtml(displayName || '-')}</h4>
+          <p>${App.escapeHtml(subtitle || '')}</p>
           <div class="recent-card-meta">
-            <span class="tag">${App.escapeHtml(i.jenis_kepemilikan)}</span>
-            ${i.izin_usaha ? '<span class="tag tag-green">Berizin</span>' : '<span class="tag tag-red">Tanpa Izin</span>'}
+            ${type === 'usaha' ? '<span class="tag">' + App.escapeHtml(i.jenis_kepemilikan || '') + '</span>' + (i.izin_usaha ? '<span class="tag tag-green">Berizin</span>' : '<span class="tag tag-red">Tanpa Izin</span>') : '<span class="tag">' + App.escapeHtml(type === 'ibadah' ? 'Rumah Ibadah' : type === 'bencana' ? 'Titik Rawan Bencana' : (i._subtitle || 'Data Kategori')) + '</span>'}
           </div>
         </div>
-      </div>`).join('')}</div>`;
+      </div>`;
+    }).join('')}</div>`;
   }
 
   /* ---------------- Daftar data usaha ---------------- */
@@ -400,6 +451,7 @@ const Dashboard = (() => {
           <option value="0">Tanpa Izin</option>
         </select>
         ${Auth.isSuperadmin() ? '<button class="btn btn-outline btn-sm" id="filterMine">Hanya Data Saya</button>' : ''}
+        ${App.exportButtonsHtml('biz')}
         <a href="#tambah" class="btn btn-primary btn-sm">${Icon.i('plus')} Tambah Data</a>
       </div>
       <div id="dataTableContainer">
@@ -409,6 +461,26 @@ const Dashboard = (() => {
 
     let page = 1;
     let mineOnly = false;
+
+    App.wireExportButtons('biz', () => App.categoryIdByName('business'), () => {
+      const params = {};
+      const search = document.getElementById('searchInput').value;
+      const kategori = document.getElementById('filterKategori').value;
+      const jenis = document.getElementById('filterJenis').value;
+      const izin = document.getElementById('filterIzin').value;
+      const kel = document.getElementById('filterKel').value;
+      const skala = document.getElementById('filterSkala').value;
+      const pekerja = document.getElementById('filterPekerja').value;
+      if (search) params.search = search;
+      if (kategori) params.kategori_usaha = kategori;
+      if (jenis) params.jenis_kepemilikan = jenis;
+      if (izin !== '') params.izin_usaha = izin;
+      if (kel && kel !== '__kosong') params.kelurahan = kel;
+      if (skala) params.skala_usaha = skala;
+      if (pekerja) params.jumlah_pekerja = pekerja;
+      if (mineOnly) params.mine = '1';
+      return params;
+    });
 
     async function loadData() {
       const search = document.getElementById('searchInput').value;
@@ -634,7 +706,72 @@ const Dashboard = (() => {
     await MapModule.mount(container);
   }
 
-  return { init, navigateTo, deleteBusiness };
+  /* -------- Dynamic category nav -------- */
+
+  async function refreshDynamicNav() {
+    const navSection = document.getElementById('dynamicNavSection');
+    if (!navSection) return;
+    try {
+      // Hanya load jika user sudah login (Auth.me sudah dipanggil di init)
+      const res = await fetch('/api/categories', { headers: { 'Content-Type': 'application/json' } });
+      if (!res.ok) { navSection.innerHTML = ''; return; }
+      const data = await res.json();
+      const activeCats = (data.categories || []).filter(c => c.active && !c.is_system);
+
+      if (!activeCats.length) {
+        navSection.innerHTML = '';
+        return;
+      }
+
+      const iconSvg = (name) => {
+        // Buat SVG sederhana untuk ikon kategori
+        const icons = {
+          database: '<path d="M12 3C7 3 3 4.8 3 7s4 4 9 4 9-1.8 9-4-4-4-9-4z"/><path d="M3 7v5c0 2.2 4 4 9 4s9-1.8 9-4V7"/><path d="M3 12v5c0 2.2 4 4 9 4s9-1.8 9-4v-5"/>',
+          home: '<path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/>',
+          heart: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.7 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.7-7.7 1.2-1.1a5.5 5.5 0 0 0 0-7.6z"/>',
+          users: '<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M15.5 5.7a3.2 3.2 0 0 1 0 5.6M17.6 14.9c1.6.8 2.6 2.3 2.9 4.6"/>',
+          'map-pin': '<path d="M12 2C8.1 2 5 5.1 5 9c0 5.3 7 13 7 13s7-7.7 7-13c0-3.9-3.1-7-7-7z"/><circle cx="12" cy="9" r="2.5"/>',
+          book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+          star: '<polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"/>',
+          briefcase: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>',
+          activity: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+          shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+          truck: '<rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
+          tool: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+        };
+        const d = icons[name] || icons.database;
+        return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+      };
+
+      // Setiap kategori baru otomatis mendapat bagiannya sendiri di menu,
+      // sama seperti bagian Usaha, Bencana, dan Rumah Ibadah.
+      navSection.innerHTML = activeCats.map(cat => `
+        <div class="nav-divider"><span>${App.escapeHtml(cat.display_name)}</span></div>
+        <a href="#cat-data-${cat.id}" class="nav-item" data-page="cat-data-${cat.id}" data-dynamic="true">
+          ${iconSvg(cat.icon || 'database')}
+          <span>${App.escapeHtml(cat.display_name)}</span>
+        </a>
+        <a href="#cat-add-${cat.id}" class="nav-item" data-page="cat-add-${cat.id}" data-dynamic="true">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span>Tambah ${App.escapeHtml(cat.display_name)}</span>
+        </a>
+      `).join('');
+
+      // Pasang event listener untuk nav items dinamis
+      navSection.querySelectorAll('.nav-item[data-dynamic]').forEach(item => {
+        item.addEventListener('click', (e) => {
+          e.preventDefault();
+          const pg = item.dataset.page;
+          if (window.location.hash.slice(1) === pg) navigateTo(pg);
+          else window.location.hash = pg;
+        });
+      });
+    } catch (_) {
+      navSection.innerHTML = '';
+    }
+  }
+
+  return { init, navigateTo, deleteBusiness, refreshDynamicNav };
 })();
 
 // Expose globally

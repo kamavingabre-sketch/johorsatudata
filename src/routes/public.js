@@ -156,6 +156,47 @@ router.get('/worship/map', (req, res) => {
   res.json({ count: rows.length, places: rows.map(shapeWor) });
 });
 
+/* ---------- Kategori Data Dinamis (publik) ---------- */
+
+// Daftar kategori kustom (non-sistem) yang aktif — untuk legenda peta publik
+router.get('/categories', (req, res) => {
+  const cats = db
+    .prepare('SELECT id, name, display_name, icon FROM data_categories WHERE is_system = 0 AND active = 1 ORDER BY sort, id')
+    .all();
+  res.json({ categories: cats });
+});
+
+// Titik lokasi untuk satu kategori kustom — hanya field lokasi + beberapa field ringkas
+router.get('/categories/:id/map', (req, res) => {
+  const cat = db.prepare('SELECT * FROM data_categories WHERE id = ? AND active = 1 AND is_system = 0').get(req.params.id);
+  if (!cat) return res.status(404).json({ error: 'Kategori tidak ditemukan.' });
+
+  const allFields = db.prepare('SELECT name, label, type FROM data_category_fields WHERE category_id = ? ORDER BY sort, id').all(cat.id);
+  const locField = allFields.find((f) => f.type === 'location');
+  if (!locField) return res.json({ count: 0, places: [], category: cat });
+
+  const latCol = `${locField.name}_lat`;
+  const lngCol = `${locField.name}_lng`;
+  const photoField = allFields.find((f) => f.type === 'photo');
+  const textFields = allFields.filter((f) => ['text', 'textarea', 'select'].includes(f.type)).slice(0, 4);
+
+  let rows;
+  try {
+    rows = db.prepare(`SELECT * FROM ${cat.table_name} WHERE ${latCol} IS NOT NULL AND ${lngCol} IS NOT NULL ORDER BY id DESC`).all();
+  } catch (e) {
+    return res.json({ count: 0, places: [], category: cat });
+  }
+
+  const places = rows.map((r) => {
+    const obj = { id: r.id, ref: r.ref_code, lat: r[latCol], lng: r[lngCol] };
+    for (const f of textFields) obj[f.name] = r[f.name];
+    if (photoField) obj.foto = r[photoField.name] || null;
+    return obj;
+  });
+
+  res.json({ count: places.length, places, category: cat, fields: textFields });
+});
+
 /* ---------- Summary (stats for public) ---------- */
 
 router.get('/summary', (req, res) => {

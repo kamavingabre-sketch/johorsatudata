@@ -7,14 +7,35 @@ const MapModule = (() => {
   let map = null;
   let groups = {};
   let items = [];          // semua penanda: { type, name, sub, kel, text, marker, latlng }
-  const state = { q: '', kel: '', layers: { business: true, disaster: true, gathering: true, worship: true } };
+  let dynamicCats = [];    // kategori data kustom yang aktif, dimuat saat mount()
+  const state = { q: '', kel: '', layers: {} };
 
-  const TYPES = {
+  const BASE_TYPES = {
     business:  { label: 'Usaha',         color: '#275e8e', glyph: 'store' },
     disaster:  { label: 'Rawan Bencana', color: '#b23730', glyph: 'warning' },
     gathering: { label: 'Titik Kumpul',  color: '#1e7d46', glyph: 'tent' },
     worship:   { label: 'Rumah Ibadah',  color: '#5e4187', glyph: 'landmark' },
   };
+  // Palet warna untuk kategori data kustom (dipakai bergilir)
+  const DYNAMIC_PALETTE = ['#c2185b', '#00838f', '#8d6e63', '#5c6bc0', '#558b2f', '#ef6c00', '#6d4c41', '#00695c'];
+  let TYPES = { ...BASE_TYPES };
+
+  function dynKey(catId) { return `dyn_${catId}`; }
+
+  async function loadDynamicCategories() {
+    dynamicCats = [];
+    TYPES = { ...BASE_TYPES };
+    try {
+      const data = await App.api('/api/categories');
+      const active = (data.categories || []).filter((c) => c.active && !c.is_system);
+      active.forEach((cat, i) => {
+        const key = dynKey(cat.id);
+        TYPES[key] = { label: cat.display_name, color: DYNAMIC_PALETTE[i % DYNAMIC_PALETTE.length], glyph: cat.icon || 'info' };
+        dynamicCats.push(cat);
+      });
+    } catch (e) { console.error(e); }
+    for (const t of Object.keys(TYPES)) state.layers[t] = true;
+  }
   const CATEGORY_COLORS = {
     'PERDAGANGAN': '#1a73e8', 'KULINER': '#ea4335', 'JASA PERAWATAN KECANTIKAN': '#e91e63',
     'JASA PERBAIKAN DAN TEKNIK': '#ff9800', 'LAUNDRY DAN DOORSMEER': '#9c27b0',
@@ -67,6 +88,17 @@ const MapModule = (() => {
         <a class="btn btn-outline btn-sm" href="${gmapsDir(p.titik_kumpul_lat, p.titik_kumpul_lng)}" target="_blank" rel="noopener">${Icon.i('navigation')} Rute</a>
         <button class="btn btn-primary btn-sm" onclick="window.location.hash='detail-bencana/${p.id}'">Detail</button>
       </div></div>`;
+  }
+  function popupDynamic(cat, fields, p) {
+    const nameField = fields.find((f) => f.type === 'text' && (f.name === 'nama' || f.name.startsWith('nama')));
+    const photoField = fields.find((f) => f.type === 'photo');
+    const otherFields = fields.filter((f) => f !== nameField && f.type !== 'photo' && f.type !== 'location').slice(0, 3);
+    const title = nameField ? p[nameField.name] : p.ref;
+    return `<div class="map-popup">${photo(photoField ? p[photoField.name] : null)}
+      <h3>${esc(title || p.ref)}</h3>
+      <div class="popup-meta"><span class="tag">${esc(cat.display_name)}</span></div>
+      ${otherFields.map((f) => `<p>${esc(f.label)}: ${esc(p[f.name] != null && p[f.name] !== '' ? String(p[f.name]) : '-')}</p>`).join('')}
+      <button class="btn btn-primary btn-sm" onclick="window.location.hash='cat-detail-${cat.id}-${p.id}'">Lihat Detail</button></div>`;
   }
   function popupWorship(p) {
     return `<div class="map-popup">${photo(p.foto)}
@@ -152,6 +184,7 @@ const MapModule = (() => {
     items = [];
     state.q = ''; state.kel = '';
     const meta = await App.fetchMeta();
+    await loadDynamicCategories();
 
     container.innerHTML = `
       <div class="map-shell">
@@ -216,6 +249,20 @@ const MapModule = (() => {
       addItem('worship', p.lat, p.lng, makeIcon(TYPES.worship.glyph, TYPES.worship.color),
         popupWorship(p), p.nama, p.jenis, p.kelurahan, [p.alamat, p.agama, p.nama_pengelola, p.ref].join(' '));
     }));
+
+    for (const cat of dynamicCats) {
+      const key = dynKey(cat.id);
+      await safe(`/api/categories/${cat.id}/map`, (r) => {
+        const fields = r.fields || [];
+        (r.places || []).forEach((p) => {
+          if (p.lat == null || p.lng == null) return;
+          const nameField = fields.find((f) => f.type === 'text' && (f.name === 'nama' || f.name.startsWith('nama')));
+          const name = nameField ? (p[nameField.name] || p.ref) : p.ref;
+          addItem(key, p.lat, p.lng, makeIcon(TYPES[key].glyph, TYPES[key].color),
+            popupDynamic(cat, fields, p), name, cat.display_name, p.kelurahan || '', [p.ref].join(' '));
+        });
+      });
+    }
   }
 
   function bindUi() {

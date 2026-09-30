@@ -589,12 +589,15 @@
         if (badge) badge.textContent = shown;
       }
 
-      const TYPES = {
+      let TYPES = {
         business:  { label: 'Usaha',         color: '#275e8e', glyph: 'store' },
         disaster:  { label: 'Rawan Bencana', color: '#b23730', glyph: 'warning' },
         gathering: { label: 'Titik Kumpul',  color: '#1e7d46', glyph: 'tent' },
         worship:   { label: 'Rumah Ibadah',  color: '#5e4187', glyph: 'landmark' },
       };
+      const DYNAMIC_PALETTE = ['#c2185b', '#00838f', '#8d6e63', '#5c6bc0', '#558b2f', '#ef6c00', '#6d4c41', '#00695c'];
+      let dynamicCats = [];
+      const dynKey = (catId) => `dyn_${catId}`;
       const KATEGORI_COLORS = {
         'PERDAGANGAN': '#1a73e8', 'KULINER': '#ea4335', 'JASA PERAWATAN KECANTIKAN': '#e91e63',
         'JASA PERBAIKAN DAN TEKNIK': '#ff9800', 'LAUNDRY DAN DOORSMEER': '#9c27b0',
@@ -613,8 +616,27 @@
       const photoTag = (src) => src ? `<img src="${esc(src)}" class="map-popup-img" alt="Foto" loading="lazy">` : '';
       const kelTag = (k) => k ? `<span class="tag tag-blue" style="margin-right:4px">${esc(k)}</span>` : '';
 
+      async function loadDynamicCategoriesPublic() {
+        TYPES = {
+          business:  { label: 'Usaha',         color: '#275e8e', glyph: 'store' },
+          disaster:  { label: 'Rawan Bencana', color: '#b23730', glyph: 'warning' },
+          gathering: { label: 'Titik Kumpul',  color: '#1e7d46', glyph: 'tent' },
+          worship:   { label: 'Rumah Ibadah',  color: '#5e4187', glyph: 'landmark' },
+        };
+        dynamicCats = [];
+        try {
+          const r = await fetch('/api/publik/categories');
+          const d = await r.json();
+          (d.categories || []).forEach((cat, i) => {
+            TYPES[dynKey(cat.id)] = { label: cat.display_name, color: DYNAMIC_PALETTE[i % DYNAMIC_PALETTE.length], glyph: cat.icon || 'info' };
+            dynamicCats.push(cat);
+          });
+        } catch (e) { console.error(e); }
+      }
+
       async function initMap() {
         mapLoaded = true;
+        await loadDynamicCategoriesPublic();
         const JOHOR = [3.5750, 98.6400];
         mapInstance = L.map('mapCanvas', { center: JOHOR, zoom: 14, minZoom: 3, maxZoom: 19, zoomControl: false });
         L.control.zoom({ position: 'bottomright' }).addTo(mapInstance);
@@ -662,6 +684,24 @@
           mapLayers.worship.addLayer(marker);
           mapItems.push({ type: 'worship', name: p.nama, kel: p.kelurahan || '', sub: p.agama + ' ' + p.jenis, marker, latlng: [p.lat, p.lng] });
         }));
+
+        for (const cat of dynamicCats) {
+          const key = dynKey(cat.id);
+          await safe(`/api/publik/categories/${cat.id}/map`, (r) => {
+            const fields = r.fields || [];
+            const nameField = fields.find(f => f.type === 'text' && (f.name === 'nama' || f.name.startsWith('nama')));
+            const otherFields = fields.filter(f => f !== nameField).slice(0, 3);
+            (r.places || []).forEach(p => {
+              if (p.lat == null || p.lng == null) return;
+              const name = nameField ? (p[nameField.name] || p.ref) : p.ref;
+              const icon = makeIcon(TYPES[key].glyph, TYPES[key].color);
+              const marker = L.marker([p.lat, p.lng], { icon });
+              marker.bindPopup(`<div class="map-popup">${photoTag(p.foto)}<h3>${esc(name)}</h3><div><span class="tag">${esc(cat.display_name)}</span></div>${otherFields.map(f => `<p>${esc(f.label)}: ${esc(p[f.name] != null && p[f.name] !== '' ? String(p[f.name]) : '-')}</p>`).join('')}</div>`, { maxWidth: 280 });
+              mapLayers[key].addLayer(marker);
+              mapItems.push({ type: key, name, kel: '', sub: cat.display_name, marker, latlng: [p.lat, p.lng] });
+            });
+          });
+        }
 
         // Layers UI
         const layersEl = document.getElementById('mapLayers');

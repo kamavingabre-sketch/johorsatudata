@@ -261,6 +261,34 @@ async function init() {
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS data_categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    display_name TEXT NOT NULL,
+    icon TEXT,
+    description TEXT,
+    table_name TEXT NOT NULL UNIQUE,
+    is_system INTEGER NOT NULL DEFAULT 0,
+    active INTEGER NOT NULL DEFAULT 1,
+    sort INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS data_category_fields (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category_id INTEGER NOT NULL REFERENCES data_categories(id) ON DELETE CASCADE,
+    label TEXT NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('text', 'textarea', 'number', 'date', 'select', 'yesno', 'phone', 'photo', 'location')),
+    options TEXT NOT NULL DEFAULT '[]',
+    required INTEGER NOT NULL DEFAULT 0,
+    sort INTEGER NOT NULL DEFAULT 0,
+    is_system INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT
+  );
   `);
 
   // Migrations for existing databases
@@ -300,9 +328,97 @@ async function init() {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_biz_skala ON businesses(skala_usaha)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_biz_pekerja ON businesses(jumlah_pekerja)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_users_kel ON users(kelurahan)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_dcat_active ON data_categories(active)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_dcat_field_cat ON data_category_fields(category_id)`);
+
+  // Seed default data categories
+  seedDataCategories();
 
   seed();
   db.saveNow();
+}
+
+function seedDataCategories() {
+  const catCount = db.prepare('SELECT COUNT(*) c FROM data_categories').get().c;
+  if (catCount === 0) {
+    // Data Usaha
+    const bizCat = db.prepare('INSERT INTO data_categories (name, display_name, icon, description, table_name, is_system, sort) VALUES (?,?,?,?,?,?,?)').run(
+      'business', 'Data Usaha', 'store', 'Data usaha dan UMKM di Kecamatan Medan Johor', 'businesses', 1, 1
+    );
+    const bizCatId = bizCat.lastInsertRowid;
+    const bizFields = [
+      { label: 'Nama Usaha', name: 'nama_usaha', type: 'text', required: 1, sort: 1, is_system: 1 },
+      { label: 'Jenis Kepemilikan', name: 'jenis_kepemilikan', type: 'select', options: JSON.stringify(['PT', 'CV', 'YAYASAN', 'PERSEORANGAN']), required: 1, sort: 2, is_system: 1 },
+      { label: 'Kategori Usaha', name: 'kategori_usaha', type: 'select', options: JSON.stringify(['PERDAGANGAN', 'KULINER', 'JASA PERAWATAN KECANTIKAN', 'JASA PERBAIKAN DAN TEKNIK', 'LAUNDRY DAN DOORSMEER', 'PRODUKSI DAN INDUSTRI RUMAH TANGGA', 'PERTANIAN', 'PERIKANAN', 'PETERNAKAN']), required: 1, sort: 3, is_system: 1 },
+      { label: 'Skala Usaha', name: 'skala_usaha', type: 'select', options: JSON.stringify(['USAHA MIKRO', 'USAHA KECIL', 'USAHA SEDANG', 'USAHA BESAR']), required: 1, sort: 4, is_system: 1 },
+      { label: 'Jumlah Pekerja', name: 'jumlah_pekerja', type: 'select', options: JSON.stringify(['DIBAWAH 10', 'DIBAWAH 30', 'DIBAWAH 50', 'DIBAWAH 100', 'DIBAWAH 300', 'DIBAWAH 500', 'DIATAS 500']), required: 1, sort: 5, is_system: 1 },
+      { label: 'Izin Usaha', name: 'izin_usaha', type: 'yesno', required: 1, sort: 6, is_system: 1 },
+      { label: 'Foto Dokumen Izin', name: 'izin_foto', type: 'photo', required: 0, sort: 7, is_system: 1 },
+      { label: 'Kelengkapan Keselamatan', name: 'kelengkapan_keamanan', type: 'select', options: JSON.stringify(['LENGKAP', 'KURANG LENGKAP', 'TIDAK LENGKAP']), required: 1, sort: 8, is_system: 1 },
+      { label: 'Nama Penanggung Jawab', name: 'nama_pic', type: 'text', required: 1, sort: 9, is_system: 1 },
+      { label: 'Nomor HP', name: 'hp_pic', type: 'phone', required: 1, sort: 10, is_system: 1 },
+      { label: 'Foto Usaha', name: 'foto_usaha', type: 'photo', required: 1, sort: 11, is_system: 1 },
+      { label: 'Kelurahan', name: 'kelurahan', type: 'select', options: JSON.stringify(['Suka Maju', 'Titi Kuning', 'Kedai Durian', 'Pangkalan Masyhur', 'Gedung Johor', 'Kwala Bekala']), required: 1, sort: 12, is_system: 1 },
+      { label: 'Alamat', name: 'alamat', type: 'textarea', required: 1, sort: 13, is_system: 1 },
+      { label: 'Latitude', name: 'lat', type: 'number', required: 1, sort: 14, is_system: 1 },
+      { label: 'Longitude', name: 'lng', type: 'number', required: 1, sort: 15, is_system: 1 },
+    ];
+    for (const f of bizFields) {
+      db.prepare('INSERT INTO data_category_fields (category_id, label, name, type, options, required, sort, is_system) VALUES (?,?,?,?,?,?,?,?)')
+        .run(bizCatId, f.label, f.name, f.type, f.options || '[]', f.required, f.sort, f.is_system);
+    }
+
+    // Titik Rawan Bencana
+    const disCat = db.prepare('INSERT INTO data_categories (name, display_name, icon, description, table_name, is_system, sort) VALUES (?,?,?,?,?,?,?)').run(
+      'disaster', 'Titik Rawan Bencana', 'warning', 'Titik rawan bencana dan titik kumpul evakuasi', 'disasters', 1, 2
+    );
+    const disCatId = disCat.lastInsertRowid;
+    const disFields = [
+      { label: 'Nama Lokasi', name: 'nama_lokasi', type: 'text', required: 1, sort: 1, is_system: 1 },
+      { label: 'Alamat', name: 'alamat', type: 'textarea', required: 1, sort: 2, is_system: 1 },
+      { label: 'Jenis Bencana', name: 'jenis_bencana', type: 'select', options: JSON.stringify(['BANJIR', 'ANGIN PUTING BELIUNG']), required: 1, sort: 3, is_system: 1 },
+      { label: 'Penyebab', name: 'penyebab', type: 'text', required: 1, sort: 4, is_system: 1 },
+      { label: 'Jumlah Rumah Terdampak', name: 'jumlah_rumah', type: 'text', required: 0, sort: 5, is_system: 1 },
+      { label: 'Jumlah KK Terdampak', name: 'jumlah_kk', type: 'text', required: 0, sort: 6, is_system: 1 },
+      { label: 'Deskripsi', name: 'deskripsi', type: 'textarea', required: 0, sort: 7, is_system: 1 },
+      { label: 'Foto', name: 'foto', type: 'photo', required: 0, sort: 8, is_system: 1 },
+      { label: 'Titik Kumpul', name: 'titik_kumpul', type: 'text', required: 0, sort: 9, is_system: 1 },
+      { label: 'Foto Titik Kumpul', name: 'titik_kumpul_foto', type: 'photo', required: 0, sort: 10, is_system: 1 },
+      { label: 'Latitude Titik Kumpul', name: 'titik_kumpul_lat', type: 'number', required: 0, sort: 11, is_system: 1 },
+      { label: 'Longitude Titik Kumpul', name: 'titik_kumpul_lng', type: 'number', required: 0, sort: 12, is_system: 1 },
+      { label: 'Kelurahan', name: 'kelurahan', type: 'select', options: JSON.stringify(['Suka Maju', 'Titi Kuning', 'Kedai Durian', 'Pangkalan Masyhur', 'Gedung Johor', 'Kwala Bekala']), required: 1, sort: 13, is_system: 1 },
+      { label: 'Latitude', name: 'lat', type: 'number', required: 1, sort: 14, is_system: 1 },
+      { label: 'Longitude', name: 'lng', type: 'number', required: 1, sort: 15, is_system: 1 },
+    ];
+    for (const f of disFields) {
+      db.prepare('INSERT INTO data_category_fields (category_id, label, name, type, options, required, sort, is_system) VALUES (?,?,?,?,?,?,?,?)')
+        .run(disCatId, f.label, f.name, f.type, f.options || '[]', f.required, f.sort, f.is_system);
+    }
+
+    // Rumah Ibadah
+    const worCat = db.prepare('INSERT INTO data_categories (name, display_name, icon, description, table_name, is_system, sort) VALUES (?,?,?,?,?,?,?)').run(
+      'worship', 'Rumah Ibadah', 'landmark', 'Data rumah ibadah di Kecamatan Medan Johor', 'worship_places', 1, 3
+    );
+    const worCatId = worCat.lastInsertRowid;
+    const worFields = [
+      { label: 'Nama Rumah Ibadah', name: 'nama', type: 'text', required: 1, sort: 1, is_system: 1 },
+      { label: 'Jenis Rumah Ibadah', name: 'jenis', type: 'text', required: 1, sort: 2, is_system: 1 },
+      { label: 'Agama', name: 'agama', type: 'select', options: JSON.stringify(['ISLAM', 'KRISTEN PROTESTAN', 'KATOLIK', 'HINDU', 'BUDDHA', 'KONGHUCU']), required: 1, sort: 3, is_system: 1 },
+      { label: 'Kelurahan', name: 'kelurahan', type: 'select', options: JSON.stringify(['Suka Maju', 'Titi Kuning', 'Kedai Durian', 'Pangkalan Masyhur', 'Gedung Johor', 'Kwala Bekala']), required: 1, sort: 4, is_system: 1 },
+      { label: 'Alamat', name: 'alamat', type: 'textarea', required: 1, sort: 5, is_system: 1 },
+      { label: 'Nama Pengurus', name: 'nama_pengelola', type: 'text', required: 0, sort: 6, is_system: 1 },
+      { label: 'Nomor HP Pengurus', name: 'hp_pengelola', type: 'phone', required: 0, sort: 7, is_system: 1 },
+      { label: 'Foto Rumah Ibadah', name: 'foto', type: 'photo', required: 1, sort: 8, is_system: 1 },
+      { label: 'Latitude', name: 'lat', type: 'number', required: 1, sort: 9, is_system: 1 },
+      { label: 'Longitude', name: 'lng', type: 'number', required: 1, sort: 10, is_system: 1 },
+    ];
+    for (const f of worFields) {
+      db.prepare('INSERT INTO data_category_fields (category_id, label, name, type, options, required, sort, is_system) VALUES (?,?,?,?,?,?,?,?)')
+        .run(worCatId, f.label, f.name, f.type, f.options || '[]', f.required, f.sort, f.is_system);
+    }
+
+    console.log('[seed] Default data categories created');
+  }
 }
 
 function seed() {
